@@ -119,7 +119,7 @@
 .centre-kicker{font:700 .8rem/1.5 var(--mono);letter-spacing:.055em;text-transform:uppercase;color:var(--deep);margin:0}
 .centre-kicker span{color:#847997;margin:0 .32rem}
 .centre-layout{display:grid;grid-template-columns:minmax(170px,210px) minmax(0,1fr);align-items:start;gap:clamp(16px,3.5vw,44px);margin-top:20px}
-.centre-nav{position:sticky;top:1rem;padding:1rem 0}
+.centre-nav{position:sticky;top:4rem;padding:1rem 0}
 .centre-nav h3,.centre-help p{font:700 .9rem/1.4 system-ui,sans-serif;color:#514c60;margin:0 0 .7rem}
 .centre-nav nav{display:grid;gap:4px}
 .centre-nav button{background:transparent;border:1px solid transparent;color:#4e4959;display:flex;align-items:center;text-align:left;gap:.67rem;padding:9px 10px;border-radius:9px;line-height:1.35;min-height:42px;font-size:.98rem}
@@ -221,7 +221,11 @@
 }
 
 /* Shared navigation for lessons and the cross-week practice collection. */
-.course-switch{display:flex;flex-wrap:wrap;gap:4px;margin:22px 0 18px;border-bottom:1px solid #d4d0e0}
+html{scroll-padding-top:4rem}
+.course-switch{
+  position:sticky;top:0;z-index:3;background:var(--bg);display:flex;flex-wrap:wrap;
+  gap:4px;margin:22px 0 18px;border-bottom:1px solid #d4d0e0
+}
 .course-switch a,.exam-tabs a{
   color:#483e66;text-decoration:none;padding:10px 15px;font-weight:650;
   border-bottom:3px solid transparent;border-radius:8px 8px 0 0
@@ -348,7 +352,7 @@
     <div class="tools backup-tools"><button class="soft" id="backup">备份学习数据</button><label class="soft" for="restore">恢复备份</label><input id="restore" type="file" accept=".json,application/json" hidden></div>
     <p id="backup-status" role="status">CSV 可查看统计；JSON 备份可恢复进度和成绩。恢复会替换当前记录，请先备份。</p>
   </details>
-  <nav class="course-switch" aria-label="Study navigation"><a href="#week=1&view=lessons" id="course-switch-lessons">Lessons <span>课程</span></a><a href="#view=exam&tab=mock" id="course-switch-exam">Practice centre <span>习题中心</span></a></nav>
+  <nav class="course-switch" id="course-tabs" aria-label="Study navigation"><a href="#week=1&view=lessons" id="course-switch-lessons">Lessons <span>课程</span></a><a href="#view=exam&tab=mock" id="course-switch-exam">Practice centre <span>习题中心</span></a></nav>
   <section class="weeks" aria-labelledby="weeks-title"><div class="section-head"><h2 id="weeks-title">课程周次 <small>WEEKS</small></h2><span>14-WEEK ROADMAP</span></div><nav class="week-grid" id="week-grid" aria-label="选择课程周次"></nav></section>
   <div id="workspace"></div>
   <footer><div><strong>POX 7003 · Statistics Studio</strong><p>课程范围来自 Week 1–6 讲义。计时仅累加课程或答题页在前台显示的时间。记录保存在当前浏览器，可导出和备份。</p></div><span>2026 / SEMESTER 01</span></footer>
@@ -7089,7 +7093,7 @@ function renderSlideStudy(){
   const returnToGuide=origin && ((from==="practice" && origin.bank) || origin.topics.some(t=>t.id===from));
   const supplementary=week===2&&current.topic?chapters[2].find(c=>c.id===current.topic):null;
   const diagram=supplementary?`<section class="concept-visual"><h4 lang="en">Visual explanation</h4><p class="label" lang="en">ADDED TEACHING DIAGRAM</p>${figure(supplementary)}</section>`:"";
-  return `<div class="lesson-layout"><aside class="toc slide-toc" aria-label="Week ${week} PDF pages"><span class="label">${slides.length} TEACHING PAGES · ORIGINAL PDF ORDER</span>${toc}</aside><article class="lesson slide-lesson" id="lesson" tabindex="-1">
+  return `<div class="lesson-layout"><aside class="toc slide-toc" aria-label="Week ${week} PDF pages"><span class="label">${slides.length} TEACHING PAGES · ORIGINAL PDF ORDER</span>${toc}</aside><article class="lesson slide-lesson" id="lesson" tabindex="-1" data-reading-anchor>
     <div class="lesson-top"><div><p class="eyebrow">WEEK ${pad(week)} · LESSON ${pad(position+1)} / ${slides.length} · PDF PAGE ${pad(current.page)}</p><h3 lang="en">${escapeHtml(current.en)}<small>${chineseTranslation(escapeHtml(current.zh),"span")}</small></h3></div><span class="timer">◷ <span id="page-time">${duration(record.time[current.id])}</span></span></div>
     <div class="page-picker"><label for="slide-select" lang="en">Go to page</label><select id="slide-select" aria-label="Go to Week ${week} PDF page">${options}</select></div>
     ${guidesForWeek(week).length ? `<div class="guide-source-nav"><button class="soft" data-centre-exit>All Week ${week} lessons</button>${returnToGuide?`<button class="soft" data-guide-open="${origin.id}" data-centre-topic="${escapeHtml(from)}">Return to guided lesson</button>`:""}</div>` : ""}
@@ -7098,8 +7102,8 @@ function renderSlideStudy(){
     ${current.sourceGap?`<aside class="source-gap" role="note">${pair("Source note: the supplied PDF has an unavailable image on this page. Only readable original text is transcribed; missing questions and answers are not reconstructed.","来源提示：所提供PDF本页存在缺失图片。这里只转录可读取原文，不虚构缺失题目或答案。")}</aside>`:""}
     <figure class="figure original-slide clarified-slide"><img src="${current.clear}" alt="Clear reading view of Week ${week} PDF page ${current.page}" decoding="async"><figcaption lang="en">${week===1&&[24,25].includes(current.page)?"Original chart with clear labels":"Clear reading view"} · PDF page ${current.page}<button class="soft" type="button" data-zoom>Enlarge image ↗</button></figcaption></figure>
     <details class="original-reference" ${current.showOriginal?"open":""}><summary lang="en">${current.showOriginal?"Original graph / output from the teacher slide":"Compare with the original teacher slide"}</summary><figure class="figure original-slide"><img src="${current.image}" width="3100" alt="Original teacher slide, Week ${week} PDF page ${current.page}" decoding="async" loading="lazy"><figcaption lang="en">Original slide · PDF page ${current.page}<button class="soft" type="button" data-zoom>Enlarge original ↗</button></figcaption></figure></details>
-    <section class="slide-transcript"><h4 lang="en">Slide content · item-by-item translation</h4><p class="label" lang="en">ORIGINAL WORDING / CHART LABELS → CHINESE TRANSLATION</p>${current.pairs.map(([en,zh],i)=>`<div class="slide-item"><span class="item-number">${pad(i+1)}</span><div>${pair(en,zh)}</div></div>`).join("")}</section>
-    <section class="beginner-intro slide-walkthrough"><h4 lang="en">Step-by-step explanation</h4><p class="label" lang="en">ADDED TEACHING · NOT ORIGINAL SLIDE TEXT</p>${pair(...current.walk)}</section>
+    <section class="slide-transcript" id="pdf-transcript" data-reading-anchor><h4 lang="en">Slide content · item-by-item translation</h4><p class="label" lang="en">ORIGINAL WORDING / CHART LABELS → CHINESE TRANSLATION</p>${current.pairs.map(([en,zh],i)=>`<div class="slide-item"><span class="item-number">${pad(i+1)}</span><div>${pair(en,zh)}</div></div>`).join("")}</section>
+    <section class="beginner-intro slide-walkthrough" id="pdf-walkthrough" data-reading-anchor><h4 lang="en">Step-by-step explanation</h4><p class="label" lang="en">ADDED TEACHING · NOT ORIGINAL SLIDE TEXT</p>${pair(...current.walk)}</section>
     ${diagram}${examples}
     <div class="pager"><button class="soft" data-action="slide-back" ${position===0?"disabled":""}>← Previous page</button><button class="primary" data-action="slide-finish">${position===slides.length-1?`Mark as read · Finish Week ${week} ↓`:"Mark as read · Next page →"}</button></div>
     </article></div>
@@ -10618,7 +10622,7 @@ function centreExamples(section) {
     exercise=renderWorkedChoice(workedExampleKey(section.id,i),...example.prompt,options,example.answer[0],solution,hint);
   }
   const previousNote = state.work[i] ? `<details><summary>Your earlier notes</summary><p class="worked-note">${escapeHtml(state.work[i])}</p></details>` : "";
-  return `<section id="centre-examples" class="centre-block" tabindex="-1"><header class="centre-section-head"><h4>Worked examples</h4><nav class="centre-example-picker" aria-label="Choose an example">${picker}</nav></header>
+  return `<section id="centre-examples" class="centre-block" tabindex="-1" data-reading-anchor><header class="centre-section-head"><h4>Worked examples</h4><nav class="centre-example-picker" aria-label="Choose an example">${picker}</nav></header>
     <p class="centre-caption">Example ${i+1} of ${section.examples.length}</p>
     ${exercise}
     ${previousNote}
@@ -10645,14 +10649,14 @@ function centreConcept(section) {
   const pages = section.pages.map(page=>`<button class="centre-link" data-centre-pdf="${page}">p. ${page}</button>`).join("");
   const nextTopic=activeGuide.topics[activeGuide.topics.indexOf(section)+1];
   const next = nextTopic ? "Continue to " + nextTopic.title : "Finish this lesson";
-  const slideNotes=week===1?"":`<details class="guide-slide-notes"><summary>Slide-by-slide notes</summary>${studySlides().filter(slide=>section.pages.includes(slide.page)).map(slide=>`<section><h5><button class="centre-link" data-centre-pdf="${slide.page}">p. ${slide.page} · ${escapeHtml(slide.en)}</button></h5>${centrePair(slide.walk)}</section>`).join("")}</details>`;
-  return `<article class="centre-reader" id="centre-reader" tabindex="-1">
+  const slideNotes=week===1?"":`<details class="guide-slide-notes" id="guide-slide-notes" data-reading-anchor><summary>Slide-by-slide notes</summary>${studySlides().filter(slide=>section.pages.includes(slide.page)).map(slide=>`<section><h5><button class="centre-link" data-centre-pdf="${slide.page}">p. ${slide.page} · ${escapeHtml(slide.en)}</button></h5>${centrePair(slide.walk)}</section>`).join("")}</details>`;
+  return `<article class="centre-reader" id="centre-reader" tabindex="-1" data-reading-anchor>
       <header class="centre-chapter-head"><p class="centre-kicker">${escapeHtml(section.title)} <span>·</span> PDF ${section.pages[0]}${section.pages.length>1?"–"+section.pages.at(-1):""}</p>
       <h3>${escapeHtml(section.question[0])}</h3>${centreZh(section.titleZh+" · "+section.question[1])}</header>
       ${centrePair(section.idea)}
-      <div id="centre-visual" tabindex="-1">${section.visual ? section.visual() : renderCentreVisual(section.id, !!prediction, !!prediction)}
+      <div id="centre-visual" tabindex="-1" data-reading-anchor>${section.visual ? section.visual() : renderCentreVisual(section.id, !!prediction, !!prediction)}
       ${prediction ? `<div class="centre-feedback ${prediction==="mean"?"is-correct":""}" role="status"><strong>Your prediction · ${escapeHtml(prediction==="both" ? "Both measures" : "The "+prediction)}</strong>${centrePair(explanations[prediction])}</div>` : ""}</div>
-      <div class="centre-method"><h4>How to work it out</h4>${centrePair(section.method)}</div>
+      <div class="centre-method" id="centre-method" data-reading-anchor><h4>How to work it out</h4>${centrePair(section.method)}</div>
       ${slideNotes}
       ${centreExamples(section)}
       <div class="centre-next"><div class="centre-source">Teacher slides ${pages}</div><button class="primary" data-centre-next>${next}</button></div>
@@ -11667,7 +11671,7 @@ function examQuestion(q,n,tab,record) {
   const self=!opts.length && tab==="mock"?`<label class="exam-self"><input type="checkbox" data-exam-self="${q.id}" ${record.self[q.id]?"checked":""} ${value?.trim()?"":"disabled"}>My answer covers the model answer’s key points.</label>`:"";
   const mark=opts.length && q.correct.length===1 ? `<p class="exam-mark" data-exam-mark="${q.id}" aria-live="polite">${value===undefined?"":q.correct.includes(value)?"Your answer is correct.":"Revisit your choice."}</p>`:"";
   const keyLabel=tab==="mock" && opts.length ? String.fromCharCode(65+q.correct[0])+". " : "";
-  return `<article class="exam-question" id="exam-item-${q.id}"><div class="exam-qhead"><span>Question ${n}</span><small>Week ${q.week}</small></div>
+  return `<article class="exam-question" id="exam-item-${q.id}" data-reading-anchor><div class="exam-qhead"><span>Question ${n}</span><small>Week ${q.week}</small></div>
     <fieldset><legend lang="en">${escapeHtml(q.prompt)}</legend>${q.visual||""}${controls}</fieldset>
     <details class="exam-key"><summary><span class="exam-reveal">View answer and explanations / 查看答案与解析</span><span class="exam-fold">Hide answer and explanations / 收起答案与解析</span></summary><div class="exam-key-body"><p class="exam-key-answer" lang="en"><span lang="zh-CN">✅ 正确答案</span> · ${keyLabel}${escapeHtml(q.answer)}</p>
     <h5>【中文解析】</h5><p lang="zh-CN">${escapeHtml(q.zh)}</p><h5>【English Explanation 英文解析】</h5><p lang="en">${escapeHtml(q.en)}</p>${mark}${self}</div></details>
@@ -11785,9 +11789,11 @@ const dayMs = 86400000;
 const countdownWindow = midtermDate - Date.UTC(2026,10,4);
 const key = "pox7003-study-v1";
 const navigationKey = "pox7003-navigation-v1";
+const scrollKey = "pox7003-reading-position-v1";
 const $ = id => document.getElementById(id);
 let data = readData();
 const tabLocations = readTabLocations();
+const readingPositions = readReadingPositions();
 let week = 1, topic = 0, mode = "study", resultIndex = 0;
 let tickAt = performance.now();
 let clockRunning = document.visibilityState === "visible" && document.hasFocus();
@@ -11823,6 +11829,55 @@ function updateCourseTabs(inExam) {
     if(tab===current) link.setAttribute("aria-current","page");
     else link.removeAttribute("aria-current");
   }
+}
+function readReadingPositions() {
+  try {
+    const saved=JSON.parse(localStorage.getItem(scrollKey));
+    return {lessons:saved?.lessons,exam:saved?.exam};
+  } catch { return {}; }
+}
+function readingLine() {
+  return Math.max(0,$("course-tabs").getBoundingClientRect().bottom)+12;
+}
+function rememberReadingPosition() {
+  const tab=examActive()?"exam":"lessons";
+  const line=readingLine();
+  let anchor=null,nearest=-Infinity;
+  if(window.scrollY>0){
+    for(const element of document.querySelectorAll("#workspace [data-reading-anchor][id]")){
+      if(!element.getClientRects().length) continue;
+      const {top,bottom}=element.getBoundingClientRect();
+      if(top<=line && bottom>line && top>nearest){anchor=element.id;nearest=top;}
+    }
+  }
+  readingPositions[tab]={route:location.hash||tabLocations[tab],top:window.scrollY,anchor,offset:anchor?line-nearest:0};
+  try { localStorage.setItem(scrollKey,JSON.stringify(readingPositions)); } catch {}
+}
+function restoreReadingPosition() {
+  const tab=examActive()?"exam":"lessons";
+  const route=location.hash||tabLocations[tab], saved=readingPositions[tab];
+  if(saved?.route!==route || !Number.isFinite(saved.top)) return false;
+  const workspace=$("workspace");
+  const content=workspace.firstElementChild;
+  function restore(){
+    const anchor=typeof saved.anchor==="string"?$(saved.anchor):null;
+    if(!anchor?.getClientRects().length || !workspace.contains(anchor)){
+      window.scrollTo(0,saved.top);return;
+    }
+    const anchorRect=anchor.getBoundingClientRect();
+    const offset=Math.min(Math.max(0,saved.offset||0),Math.max(0,anchorRect.height-1));
+    const originalLine=$("course-tabs").getBoundingClientRect().height+12;
+    window.scrollTo(0,window.scrollY+anchorRect.top+offset-originalLine);
+  }
+  restore();
+  const restingY=window.scrollY;
+  const images=Array.from(workspace.querySelectorAll("img:not([loading=lazy])")).filter(img=>!img.complete);
+  if(images.length){
+    Promise.allSettled(images.map(img=>img.decode())).then(()=>{
+      if((location.hash||tabLocations[tab])===route && workspace.firstElementChild===content && Math.abs(window.scrollY-restingY)<2) restore();
+    });
+  }
+  return true;
 }
 function state(n = week) {
   return data[n] ??= {time:{},done:{},topic:0,attempts:[],draft:null,quizMs:0};
@@ -12148,6 +12203,19 @@ function exportRecords() {
   setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 $("export").addEventListener("click",exportRecords);
+$("course-tabs").addEventListener("click",event=>{
+  const link=event.target.closest("a");
+  if(!link || link.hasAttribute("aria-current") || event.defaultPrevented ||
+    event.button!==0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  const atStickyBar=$("course-tabs").getBoundingClientRect().top<=0;
+  rememberReadingPosition();
+  checkpoint();refresh();
+  history.pushState(null,"",link.hash);
+  setWeek(hashWeek());
+  if(!restoreReadingPosition() && atStickyBar) window.scrollTo(0,0);
+  $(link.id).focus({preventScroll:true});
+});
 $("week-grid").addEventListener("click",event=>{
   const button=event.target.closest("[data-week]");
   if(!button)return;
@@ -12235,7 +12303,7 @@ $("workspace").addEventListener("submit",event=>event.preventDefault());
 document.addEventListener("visibilitychange",clockVisibility);
 window.addEventListener("focus",clockVisibility);
 window.addEventListener("blur",clockVisibility);
-window.addEventListener("pagehide",()=>{checkpoint();clockRunning=false;});
+window.addEventListener("pagehide",()=>{rememberReadingPosition();checkpoint();clockRunning=false;});
 window.addEventListener("pageshow",clockVisibility);
 window.addEventListener("hashchange",()=>{checkpoint();refresh();setWeek(hashWeek());});
 setInterval(checkpoint,500);
@@ -12244,6 +12312,7 @@ if(!location.hash && tabLocations.lessons!=="#week=1&view=lessons"){
   history.replaceState(null,"",tabLocations.lessons);
 }
 setWeek(hashWeek());
+restoreReadingPosition();
 document.addEventListener("click",event=>{
   const zoom=event.target.closest("[data-zoom]");
   if(!zoom)return;

@@ -114,7 +114,7 @@ function centreExamples(section) {
     exercise=renderWorkedChoice(workedExampleKey(section.id,i),...example.prompt,options,example.answer[0],solution,hint);
   }
   const previousNote = state.work[i] ? `<details><summary>Your earlier notes</summary><p class="worked-note">${escapeHtml(state.work[i])}</p></details>` : "";
-  return `<section id="centre-examples" class="centre-block" tabindex="-1"><header class="centre-section-head"><h4>Worked examples</h4><nav class="centre-example-picker" aria-label="Choose an example">${picker}</nav></header>
+  return `<section id="centre-examples" class="centre-block" tabindex="-1" data-reading-anchor><header class="centre-section-head"><h4>Worked examples</h4><nav class="centre-example-picker" aria-label="Choose an example">${picker}</nav></header>
     <p class="centre-caption">Example ${i+1} of ${section.examples.length}</p>
     ${exercise}
     ${previousNote}
@@ -141,14 +141,14 @@ function centreConcept(section) {
   const pages = section.pages.map(page=>`<button class="centre-link" data-centre-pdf="${page}">p. ${page}</button>`).join("");
   const nextTopic=activeGuide.topics[activeGuide.topics.indexOf(section)+1];
   const next = nextTopic ? "Continue to " + nextTopic.title : "Finish this lesson";
-  const slideNotes=week===1?"":`<details class="guide-slide-notes"><summary>Slide-by-slide notes</summary>${studySlides().filter(slide=>section.pages.includes(slide.page)).map(slide=>`<section><h5><button class="centre-link" data-centre-pdf="${slide.page}">p. ${slide.page} · ${escapeHtml(slide.en)}</button></h5>${centrePair(slide.walk)}</section>`).join("")}</details>`;
-  return `<article class="centre-reader" id="centre-reader" tabindex="-1">
+  const slideNotes=week===1?"":`<details class="guide-slide-notes" id="guide-slide-notes" data-reading-anchor><summary>Slide-by-slide notes</summary>${studySlides().filter(slide=>section.pages.includes(slide.page)).map(slide=>`<section><h5><button class="centre-link" data-centre-pdf="${slide.page}">p. ${slide.page} · ${escapeHtml(slide.en)}</button></h5>${centrePair(slide.walk)}</section>`).join("")}</details>`;
+  return `<article class="centre-reader" id="centre-reader" tabindex="-1" data-reading-anchor>
       <header class="centre-chapter-head"><p class="centre-kicker">${escapeHtml(section.title)} <span>·</span> PDF ${section.pages[0]}${section.pages.length>1?"–"+section.pages.at(-1):""}</p>
       <h3>${escapeHtml(section.question[0])}</h3>${centreZh(section.titleZh+" · "+section.question[1])}</header>
       ${centrePair(section.idea)}
-      <div id="centre-visual" tabindex="-1">${section.visual ? section.visual() : renderCentreVisual(section.id, !!prediction, !!prediction)}
+      <div id="centre-visual" tabindex="-1" data-reading-anchor>${section.visual ? section.visual() : renderCentreVisual(section.id, !!prediction, !!prediction)}
       ${prediction ? `<div class="centre-feedback ${prediction==="mean"?"is-correct":""}" role="status"><strong>Your prediction · ${escapeHtml(prediction==="both" ? "Both measures" : "The "+prediction)}</strong>${centrePair(explanations[prediction])}</div>` : ""}</div>
-      <div class="centre-method"><h4>How to work it out</h4>${centrePair(section.method)}</div>
+      <div class="centre-method" id="centre-method" data-reading-anchor><h4>How to work it out</h4>${centrePair(section.method)}</div>
       ${slideNotes}
       ${centreExamples(section)}
       <div class="centre-next"><div class="centre-source">Teacher slides ${pages}</div><button class="primary" data-centre-next>${next}</button></div>

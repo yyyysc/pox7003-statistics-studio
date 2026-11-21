@@ -39,7 +39,7 @@ function examQuestion(q,n,tab,record) {
   const self=!opts.length && tab==="mock"?`<label class="exam-self"><input type="checkbox" data-exam-self="${q.id}" ${record.self[q.id]?"checked":""} ${value?.trim()?"":"disabled"}>My answer covers the model answer’s key points.</label>`:"";
   const mark=opts.length && q.correct.length===1 ? `<p class="exam-mark" data-exam-mark="${q.id}" aria-live="polite">${value===undefined?"":q.correct.includes(value)?"Your answer is correct.":"Revisit your choice."}</p>`:"";
   const keyLabel=tab==="mock" && opts.length ? String.fromCharCode(65+q.correct[0])+". " : "";
-  return `<article class="exam-question" id="exam-item-${q.id}"><div class="exam-qhead"><span>Question ${n}</span><small>Week ${q.week}</small></div>
+  return `<article class="exam-question" id="exam-item-${q.id}" data-reading-anchor><div class="exam-qhead"><span>Question ${n}</span><small>Week ${q.week}</small></div>
     <fieldset><legend lang="en">${escapeHtml(q.prompt)}</legend>${q.visual||""}${controls}</fieldset>
     <details class="exam-key"><summary><span class="exam-reveal">View answer and explanations / 查看答案与解析</span><span class="exam-fold">Hide answer and explanations / 收起答案与解析</span></summary><div class="exam-key-body"><p class="exam-key-answer" lang="en"><span lang="zh-CN">✅ 正确答案</span> · ${keyLabel}${escapeHtml(q.answer)}</p>
     <h5>【中文解析】</h5><p lang="zh-CN">${escapeHtml(q.zh)}</p><h5>【English Explanation 英文解析】</h5><p lang="en">${escapeHtml(q.en)}</p>${mark}${self}</div></details>

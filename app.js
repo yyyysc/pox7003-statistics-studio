@@ -15,9 +15,11 @@ const dayMs = 86400000;
 const countdownWindow = midtermDate - Date.UTC(2026,10,4);
 const key = "pox7003-study-v1";
 const navigationKey = "pox7003-navigation-v1";
+const scrollKey = "pox7003-reading-position-v1";
 const $ = id => document.getElementById(id);
 let data = readData();
 const tabLocations = readTabLocations();
+const readingPositions = readReadingPositions();
 let week = 1, topic = 0, mode = "study", resultIndex = 0;
 let tickAt = performance.now();
 let clockRunning = document.visibilityState === "visible" && document.hasFocus();
@@ -53,6 +55,55 @@ function updateCourseTabs(inExam) {
     if(tab===current) link.setAttribute("aria-current","page");
     else link.removeAttribute("aria-current");
   }
+}
+function readReadingPositions() {
+  try {
+    const saved=JSON.parse(localStorage.getItem(scrollKey));
+    return {lessons:saved?.lessons,exam:saved?.exam};
+  } catch { return {}; }
+}
+function readingLine() {
+  return Math.max(0,$("course-tabs").getBoundingClientRect().bottom)+12;
+}
+function rememberReadingPosition() {
+  const tab=examActive()?"exam":"lessons";
+  const line=readingLine();
+  let anchor=null,nearest=-Infinity;
+  if(window.scrollY>0){
+    for(const element of document.querySelectorAll("#workspace [data-reading-anchor][id]")){
+      if(!element.getClientRects().length) continue;
+      const {top,bottom}=element.getBoundingClientRect();
+      if(top<=line && bottom>line && top>nearest){anchor=element.id;nearest=top;}
+    }
+  }
+  readingPositions[tab]={route:location.hash||tabLocations[tab],top:window.scrollY,anchor,offset:anchor?line-nearest:0};
+  try { localStorage.setItem(scrollKey,JSON.stringify(readingPositions)); } catch {}
+}
+function restoreReadingPosition() {
+  const tab=examActive()?"exam":"lessons";
+  const route=location.hash||tabLocations[tab], saved=readingPositions[tab];
+  if(saved?.route!==route || !Number.isFinite(saved.top)) return false;
+  const workspace=$("workspace");
+  const content=workspace.firstElementChild;
+  function restore(){
+    const anchor=typeof saved.anchor==="string"?$(saved.anchor):null;
+    if(!anchor?.getClientRects().length || !workspace.contains(anchor)){
+      window.scrollTo(0,saved.top);return;
+    }
+    const anchorRect=anchor.getBoundingClientRect();
+    const offset=Math.min(Math.max(0,saved.offset||0),Math.max(0,anchorRect.height-1));
+    const originalLine=$("course-tabs").getBoundingClientRect().height+12;
+    window.scrollTo(0,window.scrollY+anchorRect.top+offset-originalLine);
+  }
+  restore();
+  const restingY=window.scrollY;
+  const images=Array.from(workspace.querySelectorAll("img:not([loading=lazy])")).filter(img=>!img.complete);
+  if(images.length){
+    Promise.allSettled(images.map(img=>img.decode())).then(()=>{
+      if((location.hash||tabLocations[tab])===route && workspace.firstElementChild===content && Math.abs(window.scrollY-restingY)<2) restore();
+    });
+  }
+  return true;
 }
 function state(n = week) {
   return data[n] ??= {time:{},done:{},topic:0,attempts:[],draft:null,quizMs:0};
@@ -378,6 +429,19 @@ function exportRecords() {
   setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 $("export").addEventListener("click",exportRecords);
+$("course-tabs").addEventListener("click",event=>{
+  const link=event.target.closest("a");
+  if(!link || link.hasAttribute("aria-current") || event.defaultPrevented ||
+    event.button!==0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  const atStickyBar=$("course-tabs").getBoundingClientRect().top<=0;
+  rememberReadingPosition();
+  checkpoint();refresh();
+  history.pushState(null,"",link.hash);
+  setWeek(hashWeek());
+  if(!restoreReadingPosition() && atStickyBar) window.scrollTo(0,0);
+  $(link.id).focus({preventScroll:true});
+});
 $("week-grid").addEventListener("click",event=>{
   const button=event.target.closest("[data-week]");
   if(!button)return;
@@ -465,7 +529,7 @@ $("workspace").addEventListener("submit",event=>event.preventDefault());
 document.addEventListener("visibilitychange",clockVisibility);
 window.addEventListener("focus",clockVisibility);
 window.addEventListener("blur",clockVisibility);
-window.addEventListener("pagehide",()=>{checkpoint();clockRunning=false;});
+window.addEventListener("pagehide",()=>{rememberReadingPosition();checkpoint();clockRunning=false;});
 window.addEventListener("pageshow",clockVisibility);
 window.addEventListener("hashchange",()=>{checkpoint();refresh();setWeek(hashWeek());});
 setInterval(checkpoint,500);
@@ -474,6 +538,7 @@ if(!location.hash && tabLocations.lessons!=="#week=1&view=lessons"){
   history.replaceState(null,"",tabLocations.lessons);
 }
 setWeek(hashWeek());
+restoreReadingPosition();
 document.addEventListener("click",event=>{
   const zoom=event.target.closest("[data-zoom]");
   if(!zoom)return;

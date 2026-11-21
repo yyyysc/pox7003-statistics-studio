@@ -111,7 +111,7 @@
 .centre-kicker{font:700 .8rem/1.5 var(--mono);letter-spacing:.055em;text-transform:uppercase;color:var(--deep);margin:0}
 .centre-kicker span{color:#847997;margin:0 .32rem}
 .centre-layout{display:grid;grid-template-columns:minmax(170px,210px) minmax(0,1fr);align-items:start;gap:clamp(16px,3.5vw,44px);margin-top:20px}
-.centre-nav{position:sticky;top:1rem;padding:1rem 0}
+.centre-nav{position:sticky;top:4rem;padding:1rem 0}
 .centre-nav h3,.centre-help p{font:700 .9rem/1.4 system-ui,sans-serif;color:#514c60;margin:0 0 .7rem}
 .centre-nav nav{display:grid;gap:4px}
 .centre-nav button{background:transparent;border:1px solid transparent;color:#4e4959;display:flex;align-items:center;text-align:left;gap:.67rem;padding:9px 10px;border-radius:9px;line-height:1.35;min-height:42px;font-size:.98rem}
@@ -213,7 +213,11 @@
 }
 
 /* Shared navigation for lessons and the cross-week practice collection. */
-.course-switch{display:flex;flex-wrap:wrap;gap:4px;margin:22px 0 18px;border-bottom:1px solid #d4d0e0}
+html{scroll-padding-top:4rem}
+.course-switch{
+  position:sticky;top:0;z-index:3;background:var(--bg);display:flex;flex-wrap:wrap;
+  gap:4px;margin:22px 0 18px;border-bottom:1px solid #d4d0e0
+}
 .course-switch a,.exam-tabs a{
   color:#483e66;text-decoration:none;padding:10px 15px;font-weight:650;
   border-bottom:3px solid transparent;border-radius:8px 8px 0 0
