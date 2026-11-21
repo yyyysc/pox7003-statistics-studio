@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="POX 7003 双语课程、学习计时和英文测验。">
+<meta name="theme-color" content="#f6f5f1">
+<title>POX 7003 · Statistics Studio</title>
+<link rel="stylesheet" href="./style.css">
+<script defer src="./course.js"></script>
+<script defer src="./week1.js"></script>
+<script defer src="./week1-slides.js"></script>
+<script defer src="./week1-clear.js"></script>
+<script defer src="./slide-courses.js"></script>
+<script defer src="./slide-view.js"></script>
+<script defer src="./week5.js"></script>
+<script defer src="./week6.js"></script>
+<script defer src="./teaching.js"></script>
+<script defer src="./reference.js"></script>
+<script defer src="./figures.js"></script>
+<script defer src="./centre-content.js"></script>
+<script defer src="./centre-visual.js"></script>
+<script defer src="./centre-assessment.js"></script>
+<script defer src="./guided-foundations.js"></script>
+<script defer src="./guided-graphs.js"></script>
+<script defer src="./guided-activities.js"></script>
+<script defer src="./centre-lesson.js"></script>
+<script defer src="./week1-practice.js"></script>
+<script defer src="./revision-original.js"></script>
+<script defer src="./revision-mock.js"></script>
+<script defer src="./revision-scope.js"></script>
+<script defer src="./exam-centre.js"></script>
+<script defer src="./app.js"></script>
+<script defer src="./storage.js"></script>
+</head>
+<body>
+<header class="top"><div class="shell top-inner"><a class="brand" href="#week=1"><span class="logo" aria-hidden="true">▥</span><span>STATISTICS STUDIO<small>POX 7003 · STUDY DASHBOARD</small></span></a><div class="tools"><span class="local" id="save-status"><i></i> 本机自动保存</span><button id="export" class="soft">↓ <span>导出记录</span></button></div></div></header>
+<main class="shell">
+  <section class="hero"><div><p class="eyebrow"><span class="live"></span> STUDY DASHBOARD <span class="hero-rule"></span> SEMESTER 01</p><h1>数据分析<span>学习台</span></h1><p class="subtitle" lang="en">Quantitative and Qualitative Data Analysis</p></div><div class="now"><small>当前教学周 / CURRENT WEEK</small><strong>Week 06</strong></div></section>
+  <section class="gauges" aria-label="课程仪表盘">
+    <div class="gauge-card progress"><div class="ring" id="progress-ring" aria-hidden="true"><span>▥</span></div><div><p class="eyebrow">01 / COURSE PROGRESS</p><div class="metric"><strong id="week-count">0</strong><span> / 14 周</span></div><p>读完当周全部章节后计入</p></div></div>
+    <div class="gauge-card exam"><div class="ring" id="exam-ring" aria-hidden="true"><span>◷</span></div><div><p class="eyebrow">02 / MIDTERM COUNTDOWN</p><div class="metric"><strong id="exam-days">—</strong><span id="exam-unit"> 天</span></div><p>期中考试 · Week 8 周五 · 2026.11.27</p></div></div>
+  </section>
+  <details class="access-help"><summary>离线学习与记录备份 / Offline &amp; backup</summary>
+    <p><a href="./POX7003-offline.html" download>下载完整离线版</a>，保存后可直接打开学习。记录按浏览器保存，可通过备份转移到其他设备。</p>
+    <div class="tools backup-tools"><button class="soft" id="backup">备份学习数据</button><label class="soft" for="restore">恢复备份</label><input id="restore" type="file" accept=".json,application/json" hidden></div>
+    <p id="backup-status" role="status">CSV 可查看统计；JSON 备份可恢复进度和成绩。恢复会替换当前记录，请先备份。</p>
+  </details>
+  <nav class="course-switch" aria-label="Study navigation"><a href="#week=1&view=lessons" id="course-switch-lessons">Lessons <span>课程</span></a><a href="#view=exam&tab=mock" id="course-switch-exam">Practice centre <span>习题中心</span></a></nav>
+  <section class="weeks" aria-labelledby="weeks-title"><div class="section-head"><h2 id="weeks-title">课程周次 <small>WEEKS</small></h2><span>14-WEEK ROADMAP</span></div><nav class="week-grid" id="week-grid" aria-label="选择课程周次"></nav></section>
+  <div id="workspace"></div>
+  <footer><div><strong>POX 7003 · Statistics Studio</strong><p>课程范围来自 Week 1–6 讲义。计时仅累加课程或答题页在前台显示的时间。记录保存在当前浏览器，可导出和备份。</p></div><span>2026 / SEMESTER 01</span></footer>
+</main>
+<dialog id="diagram-viewer"><div class="diagram-toolbar"><button type="button" class="soft" id="close-diagram">Close</button><label for="diagram-scale">Zoom <input id="diagram-scale" type="range" min="100" max="300" step="25" value="100"></label><output id="diagram-scale-value" for="diagram-scale">100%</output></div><div id="large-diagram"></div></dialog>
+</body>
+</html>
+
