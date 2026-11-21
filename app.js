@@ -14,8 +14,10 @@ const midtermDate = Date.UTC(2026,10,27);
 const dayMs = 86400000;
 const countdownWindow = midtermDate - Date.UTC(2026,10,4);
 const key = "pox7003-study-v1";
+const navigationKey = "pox7003-navigation-v1";
 const $ = id => document.getElementById(id);
 let data = readData();
+const tabLocations = readTabLocations();
 let week = 1, topic = 0, mode = "study", resultIndex = 0;
 let tickAt = performance.now();
 let clockRunning = document.visibilityState === "visible" && document.hasFocus();
@@ -23,6 +25,34 @@ let clockRunning = document.visibilityState === "visible" && document.hasFocus()
 function readData() {
   try { return JSON.parse(localStorage.getItem(key)) || {}; }
   catch { return {}; }
+}
+function readTabLocations() {
+  const defaults={lessons:"#week=1&view=lessons",exam:"#view=exam&tab=mock"};
+  try {
+    const saved=JSON.parse(localStorage.getItem(navigationKey));
+    for(const tab of Object.keys(defaults)){
+      const hash=saved?.[tab];
+      if(typeof hash!=="string" || !hash.startsWith("#")) continue;
+      const route=new URLSearchParams(hash.slice(1));
+      if(tab==="exam" ? route.get("view")==="exam" : route.has("week") && route.get("view")!=="exam"){
+        defaults[tab]=hash;
+      }
+    }
+  } catch {}
+  return defaults;
+}
+function updateCourseTabs(inExam) {
+  const current=inExam?"exam":"lessons", hash=location.hash;
+  if(hash && tabLocations[current]!==hash){
+    tabLocations[current]=hash;
+    try { localStorage.setItem(navigationKey,JSON.stringify(tabLocations)); } catch {}
+  }
+  for(const tab of Object.keys(tabLocations)){
+    const link=$("course-switch-"+tab);
+    link.setAttribute("href",tabLocations[tab]);
+    if(tab===current) link.setAttribute("aria-current","page");
+    else link.removeAttribute("aria-current");
+  }
 }
 function state(n = week) {
   return data[n] ??= {time:{},done:{},topic:0,attempts:[],draft:null,quizMs:0};
@@ -84,8 +114,7 @@ function render(scrollTarget) {
   const inExam=examActive();
   document.body.classList.toggle("exam-focus",inExam);
   document.body.classList.toggle("centre-focus", mode==="centre" && !inExam);
-  $("course-switch-lessons").setAttribute("aria-current",inExam?"false":"page");
-  $("course-switch-exam").setAttribute("aria-current",inExam?"page":"false");
+  updateCourseTabs(inExam);
   if(inExam){
     $("workspace").innerHTML=examPage();
     if(scrollTarget){const target=$(scrollTarget);target?.focus({preventScroll:true});target?.scrollIntoView({block:"start"});}
@@ -441,6 +470,9 @@ window.addEventListener("pageshow",clockVisibility);
 window.addEventListener("hashchange",()=>{checkpoint();refresh();setWeek(hashWeek());});
 setInterval(checkpoint,500);
 setInterval(dashboard,60000);
+if(!location.hash && tabLocations.lessons!=="#week=1&view=lessons"){
+  history.replaceState(null,"",tabLocations.lessons);
+}
 setWeek(hashWeek());
 document.addEventListener("click",event=>{
   const zoom=event.target.closest("[data-zoom]");
