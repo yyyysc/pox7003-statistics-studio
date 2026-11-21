@@ -115,8 +115,10 @@
 .centre-nav h3,.centre-help p{font:700 .9rem/1.4 system-ui,sans-serif;color:#514c60;margin:0 0 .7rem}
 .centre-nav nav{display:grid;gap:4px}
 .centre-nav button{background:transparent;border:1px solid transparent;color:#4e4959;display:flex;align-items:center;text-align:left;gap:.67rem;padding:9px 10px;border-radius:9px;line-height:1.35;min-height:42px;font-size:.98rem}
-.centre-nav button:hover,.centre-nav button[aria-current]{background:#ece7fa;color:var(--deep)}
-.centre-nav button[aria-current]{font-weight:700;border-color:#d9cfee}
+.centre-nav button[aria-current=step],.toc .topic[aria-current=step]{
+  background:#e3daf8;color:var(--deep);font-weight:700;box-shadow:inset 3px 0 var(--purple)
+}
+.centre-nav button[aria-current=step]{border-color:#c4b4e8}
 .centre-step-index{font:600 .8rem/1.4 var(--mono);color:#604e80}
 .centre-progress,.centre-help small,.centre-caption,.centre-source,.centre-answer-meta{font-size:.9rem;color:#5b5568}
 .centre-progress{border-top:1px solid #dcd8e2;margin:1.1rem 0;padding-top:.9rem}
@@ -212,8 +214,33 @@
 
 /* Shared navigation for lessons and the cross-week practice collection. */
 .course-switch{display:flex;flex-wrap:wrap;gap:4px;margin:22px 0 18px;border-bottom:1px solid #d4d0e0}
-.course-switch a,.exam-tabs a{color:#483e66;text-decoration:none;padding:10px 15px;font-weight:650;border-bottom:3px solid transparent}
-.course-switch a[aria-current=page],.exam-tabs a[aria-current=page]{border-bottom-color:#5945ac;color:#34236f}
+.course-switch a,.exam-tabs a{
+  color:#483e66;text-decoration:none;padding:10px 15px;font-weight:650;
+  border-bottom:3px solid transparent;border-radius:8px 8px 0 0
+}
+.course-switch a[aria-current=page],.exam-tabs a[aria-current=page]{
+  background:#e7ddfc;border-bottom-color:var(--purple);color:var(--deep)
+}
+@media (hover:hover){
+  .course-switch a:hover,.exam-tabs a:hover{
+    background:#f0ebfa;border-bottom-color:#ae9bdb;color:var(--deep)
+  }
+  .course-switch a[aria-current=page]:hover,.exam-tabs a[aria-current=page]:hover{
+    background:#dfd2fa;border-bottom-color:var(--purple)
+  }
+  .week-tab:not([aria-current]):hover,.centre-example-picker button:not([aria-current]):hover{
+    background:var(--violet);border-color:#8870ca;color:var(--deep)
+  }
+  .week-tab[aria-current]:hover,.centre-example-picker button[aria-current]:hover{
+    background:#432b8c;border-color:#432b8c
+  }
+  .centre-nav button:not([aria-current]):hover,.toc .topic:not([aria-current]):hover{
+    background:var(--violet);color:var(--deep)
+  }
+  .centre-nav button[aria-current=step]:hover,.toc .topic[aria-current=step]:hover{
+    background:#d9cbf4
+  }
+}
 .course-switch a span{font-size:.9em;margin-left:5px}
 .exam-focus #workspace{max-width:1100px;margin-inline:auto}
 .exam-centre{background:white;border:1px solid #d9d5e2;border-radius:16px;overflow:hidden;scroll-margin:12px}
