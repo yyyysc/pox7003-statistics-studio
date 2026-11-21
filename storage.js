@@ -17,6 +17,7 @@ function validateBackup(payload) {
     if(!isMap(record.time)||!isMap(record.done)||!Number.isInteger(record.topic)||record.topic<0||record.topic>=Math.max(1,list.length)||!isTime(record.quizMs)||!Array.isArray(record.attempts)) throw Error("备份中的学习记录不完整。");
     if(record.centre!==undefined && (n!==1 || !validateCentreLesson(record.centre))) throw Error("备份中的集中趋势样板课记录不完整。");
     if(record.revision!==undefined && (n!==1 || !validExamState(record.revision))) throw Error("备份中的期中练习记录不完整。");
+    if(!validWorkedExamples(record.workedExamples,n)) throw Error("备份中的例题作答记录无效。");
     const lessonIds=new Set(list.map(c=>c.id));
     if(record.guided!==undefined && (n!==1 || !isMap(record.guided) || Object.entries(record.guided).some(([id,v])=>id==="centre" || !findGuide(id) || !validateCentreLesson(v,findGuide(id))))) throw Error("备份中的分课学习记录不完整。");
     if(n===1) for(const guide of guidedModules) for(const t of guide.topics) lessonIds.add(guideTimeKey(t.id));

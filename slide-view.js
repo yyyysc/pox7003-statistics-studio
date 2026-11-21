@@ -24,18 +24,12 @@ function setSlide(index){
   }
   save();render("lesson");
 }
-function workedExamples(topic){
-  const guide=topic&&teaching[topic];
-  if(!guide)return "";
-  const chapter=chapters[week].find(c=>c.id===topic);
-  return `<section class="worked-examples slide-worked" data-example-topic="${topic}"><h4 lang="en">Five extra worked examples · ${escapeHtml(chapter.en)}</h4><p class="label" lang="en">ADDED PRACTICE FOR THIS KNOWLEDGE POINT</p>${guide.examples.map((item,i)=>`<details class="worked-example" ${i===0?"open":""}><summary lang="en">Example ${i+1} · ${escapeHtml(item.qen)}</summary>${chineseTranslation(escapeHtml(item.qzh),"p")}<div lang="en"><span class="label">WORKED SOLUTION</span><ol>${item.sen.split("→").map(step=>`<li>${escapeHtml(step.trim())}</li>`).join("")}</ol></div>${chineseTranslation(`<ol>${item.szh.split("→").map(step=>`<li>${escapeHtml(step.trim())}</li>`).join("")}</ol>`)}<p class="model-answer" lang="en">Answer · <strong>${escapeHtml(item.answer)}</strong></p></details>`).join("")}</section>`;
-}
 function renderSlideStudy(){
   const slides=studySlides(),record=slideRecord(),current=currentSlide(),position=slides.indexOf(current);
   const pair=(en,zh)=>`<p lang="en">${escapeHtml(en)}</p>${chineseTranslation(escapeHtml(zh),"p")}`;
   const toc=slides.map(s=>`<button class="topic" type="button" data-slide="${s.page-1}" ${s===current?'aria-current="step"':""}><span class="num">${record.slideDone[s.id]?"✓":pad(s.page)}</span><span lang="en">${escapeHtml(s.en)}</span><time id="time-${s.id}">${duration(record.time[s.id])}</time></button>`).join("");
   const options=slides.map(s=>`<option value="${s.page-1}" ${s===current?"selected":""}>PDF ${pad(s.page)} · ${escapeHtml(s.en)}</option>`).join("");
-  const examples=workedExamples(current.topic);
+  const examples=renderSlideWorkedExamples(chapters[week].find(chapter=>chapter.id===current.topic));
   const route=centreRoute(), from=route.get("from"), origin=findGuide(route.get("guide")||"centre");
   const returnToGuide=week===1 && origin && (from==="practice" || origin.topics.some(t=>t.id===from));
   const supplementary=week===2&&current.topic?chapters[2].find(c=>c.id===current.topic):null;

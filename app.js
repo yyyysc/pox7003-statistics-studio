@@ -131,11 +131,6 @@ function renderStudy() {
   const pairs=chapter.pairs.map(([zh,en])=>`<p lang="en">${escapeHtml(en)}</p>${chineseTranslation(escapeHtml(zh),"p")}`).join("");
   const sources=chapter.id==="alpha"?' · <a href="https://www.amstat.org/asa/files/pdfs/p-valuestatement.pdf" target="_blank" rel="noopener">ASA p 值说明</a>':["skew","kurtosis"].includes(chapter.id)?' · <a href="https://itl.nist.gov/div898/handbook/eda/section3/eda35b.htm" target="_blank" rel="noopener">NIST 偏度与峰度</a>':"";
   const guide=teaching[chapter.id];
-  const worked=guide.examples.map((item,i)=>`<details class="worked-example" ${i===0?"open":""}><summary lang="en">Example ${i+1} · ${escapeHtml(item.qen)}</summary>
-    ${chineseTranslation(escapeHtml(item.qzh),"p","example-question")}
-    <div class="bilingual"><div lang="en"><span class="label">WORKED SOLUTION</span><ol>${item.sen.split("→").map(step=>`<li>${escapeHtml(step.trim())}</li>`).join("")}</ol></div>
-    ${chineseTranslation(`<span class="label">中文讲解</span><ol>${item.szh.split("→").map(step=>`<li>${escapeHtml(step.trim())}</li>`).join("")}</ol>`)}</div>
-    <p class="model-answer" lang="en">Answer · <strong>${escapeHtml(item.answer)}</strong></p></details>`).join("");
   const notes=(referenceNotes[chapter.id]??[]).map(([zh,en,textZh,textEn])=>`<div class="reference-note"><h5 lang="en">${escapeHtml(en)}</h5>${chineseTranslation(escapeHtml(zh),"p")}<div class="bilingual"><p lang="en">${escapeHtml(textEn)}</p>${chineseTranslation(escapeHtml(textZh),"p")}</div></div>`).join("");
   return `<div class="lesson-layout"><aside class="toc" aria-label="Lesson contents"><span class="label">CONTENTS</span>${toc}</aside><article class="lesson" id="lesson" tabindex="-1">
     <div class="lesson-top"><div><p class="eyebrow">LESSON ${pad(topic+1)} / ${pad(list.length)} · PDF PP. ${chapter.pages}</p><h3 lang="en">${chapter.en}<small>${chineseTranslation(escapeHtml(chapter.zh),"span")}</small></h3></div><span class="timer">◷ <span id="page-time">${duration(record.time[chapter.id])}</span></span></div>
@@ -143,7 +138,7 @@ function renderStudy() {
     <section class="beginner-intro"><h4 lang="en">Start with the idea</h4><p lang="en">${escapeHtml(guide.en)}</p>${chineseTranslation(escapeHtml(guide.zh),"p")}</section>
     ${figure(chapter)}
     <section class="how-to"><h4 lang="en">How to solve the question</h4><p lang="en">${escapeHtml(guide.howEn)}</p>${chineseTranslation(escapeHtml(guide.howZh),"p")}</section>
-    <section class="worked-examples"><h4 lang="en">Five worked examples</h4>${worked}</section>
+    ${renderSlideWorkedExamples(chapter)}
     ${notes?`<details class="reference-reading"><summary lang="en">Reading results and avoiding common mistakes</summary><p class="reference-credit" lang="en">Adapted from your reference images and checked for statistical accuracy.</p>${notes}<p class="reference-credit"><a href="https://online.stat.psu.edu/stat200/Lesson12" target="_blank" rel="noopener">Correlation and regression</a> · <a href="https://online.stat.psu.edu/stat462/node/131/" target="_blank" rel="noopener">Multiple regression and R²</a></p></details>`:""}
     <details class="formal-lesson"><summary lang="en">Definitions, formulas and lecture notes</summary>${renderDefinitions(chapter)}<div class="bilingual"><span class="label" lang="en">ENGLISH</span><span class="label">中文辅助</span>${pairs}</div></details>
     <div class="pager"><button class="soft" data-action="back" ${topic===0?"disabled":""}>← 上一节</button><button class="primary" data-action="finish">${topic===list.length-1?(finished?"返回课程目录":"标记读完 · 完成本节"):"标记读完 · 下一节 →"}</button></div>
@@ -369,7 +364,7 @@ $("workspace").addEventListener("click",event=>{
   const button=event.target.closest("button");
   if(!button)return;
   checkpoint();refresh();
-  if(examClick(button))return;
+  if(examClick(button) || workedChoiceClick(button))return;
   if(centreClick(button))return;
   if(week===1 && weeklyReviewClick(button))return;
   if(button.dataset.topic!==undefined){setTopic(+button.dataset.topic);return;}
@@ -417,7 +412,7 @@ $("workspace").addEventListener("click",event=>{
 });
 $("workspace").addEventListener("input",event=>{
   const input=event.target;
-  if(examInput(input))return;
+  if(examInput(input) || workedChoiceInput(input))return;
   if(mode==="centre"){refresh();centreInput(input);return;}
   if(input.name!=="answer" || mode!=="quiz")return;
   refresh();

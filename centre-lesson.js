@@ -99,17 +99,16 @@ function centreExamples(section) {
   const state = centreMicro(section.id);
   const i = state.index;
   const example = section.examples[i];
-  const open = i === 0 || state.shown[i];
   const steps = example.steps.map((pair) => `<li>${escapeHtml(pair[0])}${centreZh(pair[1])}</li>`).join("");
   const picker = section.examples.map((item, n) => `<button type="button" data-centre-example="${n}" aria-label="Example ${n+1}" ${n === i ? 'aria-current="step"' : ""}>${n+1}</button>`).join("");
-  const solution = `<div class="centre-solution"><h5>Worked solution</h5><ol>${steps}</ol><p><strong>${escapeHtml(example.answer[0])}</strong></p>${centreZh(example.answer[1])}</div>`;
+  const options = workedExampleOptions(example.answer[0],guidedExampleDistractors[section.id][i],i+section.id.length);
+  const solution = `<div class="centre-solution"><p><strong>Answer · ${escapeHtml(example.answer[0])}</strong></p>${centreZh(example.answer[1])}<h5>Worked solution</h5><ol>${steps}</ol></div>`;
+  const hint = `<details class="centre-hint"><summary>Show a hint</summary>${centrePair(example.hint)}</details>`;
+  const previousNote = state.work[i] ? `<details><summary>Your earlier notes</summary><p class="worked-note">${escapeHtml(state.work[i])}</p></details>` : "";
   return `<section id="centre-examples" class="centre-block" tabindex="-1"><header class="centre-section-head"><h4>Worked examples</h4><nav class="centre-example-picker" aria-label="Choose an example">${picker}</nav></header>
-    <p class="centre-caption">Example ${i+1} of 5 · ${["Walk through it","Try it with a hint","Try it yourself","Try it yourself","Try it yourself"][i]}</p>
-    <h5 class="centre-prompt">${escapeHtml(example.prompt[0])}</h5>${centreZh(example.prompt[1])}
-    ${i === 0 ? "" : `<details class="centre-hint"><summary>Show a hint</summary>${centrePair(example.hint)}</details>
-      <label class="centre-field-label" for="centre-work">Your working</label><textarea id="centre-work" rows="2" maxlength="800" placeholder="Write your answer or first step here.">${escapeHtml(state.work[i] || "")}</textarea>
-      ${open ? "" : '<div class="centre-example-actions"><button class="soft" data-centre-solution>Compare with the solution</button><button class="centre-link" data-centre-stuck>I need a walkthrough</button></div><p id="centre-example-message" role="status"></p>'}`}
-    ${open ? solution : ""}
+    <p class="centre-caption">Example ${i+1} of ${section.examples.length}</p>
+    ${renderWorkedChoice(workedExampleKey(section.id,i),...example.prompt,options,example.answer[0],solution,hint)}
+    ${previousNote}
     ${i < 4 ? '<button class="centre-link" data-centre-example="'+(i+1)+'">Next example</button>' : ""}
     </section>`;
 }
@@ -191,14 +190,6 @@ function centreClick(button) {
   if (button.hasAttribute("data-centre-example")) {
     example.index = Number(button.dataset.centreExample);
     target = "centre-examples";
-  } else if (button.hasAttribute("data-centre-solution") || button.hasAttribute("data-centre-stuck")) {
-    if (button.hasAttribute("data-centre-solution") && !example.work[example.index]?.trim()) {
-      $("centre-example-message").textContent = "Write a first step, or choose “I need a walkthrough”.";
-      $("centre-work").focus();
-      return true;
-    }
-    example.shown[example.index] = true;
-    target = "centre-examples";
   } else if (button.hasAttribute("data-centre-check")) {
     record.answers[centrePane] = Number(button.dataset.centreCheck);
     target = "centre-check";
@@ -221,9 +212,4 @@ function centreClick(button) {
 
 function centreInput(input) {
   if (centrePane === "practice") return centreAssessInput(input);
-  if (input.id === "centre-work") {
-    const example = centreMicro(centrePane);
-    example.work[example.index] = input.value;
-    save();
-  }
 }

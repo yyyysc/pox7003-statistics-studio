@@ -247,6 +247,13 @@
 .exam-key{background:#f4f5ed;border:1px solid #daddce;border-radius:9px;margin:12px 0 6px}
 .exam-key summary{padding:10px 14px;cursor:pointer;font-weight:700}
 .exam-key:not([open]) .exam-fold,.exam-key[open] .exam-reveal{display:none}
+.worked-choice{margin:12px 0 0}
+.worked-choice fieldset{border:0;margin:0 0 12px;padding:0;min-width:0}
+.worked-choice legend{font-size:1rem;font-weight:650;max-width:100%;padding:0;margin-bottom:8px}
+.worked-choice .options label{overflow-wrap:anywhere}
+.worked-choice [hidden]{display:none}
+.worked-choice-feedback{color:var(--deep);font-weight:700;margin:12px 0 5px}
+.worked-note{white-space:pre-wrap}
 .exam-key-body{padding:0 14px 12px}
 .exam-key h5{margin:10px 0 3px;font-size:.95rem;color:#49435b}
 .exam-key p{margin:0;white-space:pre-line}.exam-key-answer{font-weight:650}
