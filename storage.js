@@ -19,8 +19,11 @@ function validateBackup(payload) {
     if(record.revision!==undefined && (n!==1 || !validExamState(record.revision))) throw Error("备份中的期中练习记录不完整。");
     if(!validWorkedExamples(record.workedExamples,n)) throw Error("备份中的例题作答记录无效。");
     const lessonIds=new Set(list.map(c=>c.id));
-    if(record.guided!==undefined && (n!==1 || !isMap(record.guided) || Object.entries(record.guided).some(([id,v])=>id==="centre" || !findGuide(id) || !validateCentreLesson(v,findGuide(id))))) throw Error("备份中的分课学习记录不完整。");
-    if(n===1) for(const guide of guidedModules) for(const t of guide.topics) lessonIds.add(guideTimeKey(t.id));
+    if(record.guided!==undefined && (!guidesForWeek(n).length || !isMap(record.guided) || Object.entries(record.guided).some(([id,v])=>{
+      const guide=findGuide(id,n);
+      return id==="centre" || !guide || !validateCentreLesson(v,guide);
+    }))) throw Error("备份中的分课学习记录不完整。");
+    for(const guide of guidesForWeek(n)) for(const t of guide.topics) lessonIds.add(guideTimeKey(t.id));
     if(slideCourses[n]) {
       const slideIds=new Set(Array.from({length:slideCourses[n].sourcePages},(_,i)=>"slide-"+String(i+1).padStart(2,"0")));
       slideIds.forEach(id=>lessonIds.add(id));

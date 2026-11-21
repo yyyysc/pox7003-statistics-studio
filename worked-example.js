@@ -11,6 +11,18 @@ function slideWorkedOptions(topicId,item,index,question) {
   return workedExampleOptions(item.answer,distractors,index+topicId.length);
 }
 
+function slideWorkedPrompt(item) {
+  return item.qen.replace(/ (?:Enter one word|Enter a decimal)\.$/,"");
+}
+
+function workedSteps(text) {
+  return text.split("→").map(step=>`<li>${escapeHtml(step.trim())}</li>`).join("");
+}
+
+function bilingualWorkedSolution(answer,en,zh) {
+  return `<p class="model-answer">Answer · <strong>${escapeHtml(answer)}</strong></p><h5>Worked solution</h5><ol>${workedSteps(en)}</ol>${chineseTranslation(`<ol>${workedSteps(zh)}</ol>`)}`;
+}
+
 function validWorkedExamples(record,n) {
   if(record===undefined) return true;
   if(!record || typeof record!=="object" || Array.isArray(record)) return false;
@@ -23,6 +35,9 @@ function validWorkedExamples(record,n) {
   }
   if(n===1) for(const guide of guidedModules) for(const topic of guide.topics) {
     topic.examples.forEach((example,i)=>known.set(workedExampleKey(topic.id,i),[example.answer[0],...guidedExampleDistractors[topic.id][i]]));
+  }
+  if(n!==1) for(const guide of guidesForWeek(n)) for(const topic of guide.topics) {
+    topic.examples.forEach(example=>known.set(example.id,example.options));
   }
   return Object.entries(record).every(([id,row])=>row && typeof row.checked==="boolean" && known.get(id)?.includes(row.choice));
 }
@@ -80,10 +95,8 @@ function renderSlideWorkedExamples(chapter) {
   const examples=guide.examples.map((item,index)=>{
     const question=chapter.questions.find(q=>q.id===item.id);
     const options=slideWorkedOptions(chapter.id,item,index,question);
-    const list=text=>text.split("→").map(step=>`<li>${escapeHtml(step.trim())}</li>`).join("");
-    const solution=`<p class="model-answer">Answer · <strong>${escapeHtml(item.answer)}</strong></p><h5>Worked solution</h5><ol>${list(item.sen)}</ol>${chineseTranslation(`<ol>${list(item.szh)}</ol>`)}`;
-    const prompt=item.qen.replace(/ (?:Enter one word|Enter a decimal)\.$/,"");
-    return `<details class="worked-example"${index===0?" open":""}><summary>Example ${index+1}</summary>${renderWorkedChoice(item.id,prompt,item.qzh,options,item.answer,solution)}</details>`;
+    const solution=bilingualWorkedSolution(item.answer,item.sen,item.szh);
+    return `<details class="worked-example"${index===0?" open":""}><summary>Example ${index+1}</summary>${renderWorkedChoice(item.id,slideWorkedPrompt(item),item.qzh,options,item.answer,solution)}</details>`;
   }).join("");
   return `<section class="worked-examples slide-worked" lang="en"><h4>Worked examples · ${escapeHtml(chapter.en)}</h4>${examples}</section>`;
 }

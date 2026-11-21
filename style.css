@@ -254,6 +254,10 @@
 .worked-choice [hidden]{display:none}
 .worked-choice-feedback{color:var(--deep);font-weight:700;margin:12px 0 5px}
 .worked-note{white-space:pre-wrap}
+.guide-slide-notes{border:1px solid var(--line);border-radius:10px;padding:10px 15px}
+.guide-slide-notes section{border-top:1px solid var(--line);margin-top:14px;padding-top:4px}
+.guide-slide-notes h5{margin:3px 0 6px;font-size:.95rem}
+.guide-source-figure img{max-height:430px;object-fit:contain}
 .exam-key-body{padding:0 14px 12px}
 .exam-key h5{margin:10px 0 3px;font-size:.95rem;color:#49435b}
 .exam-key p{margin:0;white-space:pre-line}.exam-key-answer{font-weight:650}

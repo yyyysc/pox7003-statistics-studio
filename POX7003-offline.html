@@ -262,6 +262,10 @@
 .worked-choice [hidden]{display:none}
 .worked-choice-feedback{color:var(--deep);font-weight:700;margin:12px 0 5px}
 .worked-note{white-space:pre-wrap}
+.guide-slide-notes{border:1px solid var(--line);border-radius:10px;padding:10px 15px}
+.guide-slide-notes section{border-top:1px solid var(--line);margin-top:14px;padding-top:4px}
+.guide-slide-notes h5{margin:3px 0 6px;font-size:.95rem}
+.guide-source-figure img{max-height:430px;object-fit:contain}
 .exam-key-body{padding:0 14px 12px}
 .exam-key h5{margin:10px 0 3px;font-size:.95rem;color:#49435b}
 .exam-key p{margin:0;white-space:pre-line}.exam-key-answer{font-weight:650}
@@ -7034,7 +7038,7 @@ function setSlide(index){
   activeSlides[week]=index;
   slideRecord().slide=index;
   const route=centreRoute();
-  if(week===1 && route.has("source") && Number(route.get("source"))!==index+1) {
+  if(route.has("source") && Number(route.get("source"))!==index+1) {
     route.set("source",String(index+1));
     history.replaceState(null,"","#"+route);
   }
@@ -7046,14 +7050,14 @@ function renderSlideStudy(){
   const toc=slides.map(s=>`<button class="topic" type="button" data-slide="${s.page-1}" ${s===current?'aria-current="step"':""}><span class="num">${record.slideDone[s.id]?"✓":pad(s.page)}</span><span lang="en">${escapeHtml(s.en)}</span><time id="time-${s.id}">${duration(record.time[s.id])}</time></button>`).join("");
   const options=slides.map(s=>`<option value="${s.page-1}" ${s===current?"selected":""}>PDF ${pad(s.page)} · ${escapeHtml(s.en)}</option>`).join("");
   const examples=renderSlideWorkedExamples(chapters[week].find(chapter=>chapter.id===current.topic));
-  const route=centreRoute(), from=route.get("from"), origin=findGuide(route.get("guide")||"centre");
-  const returnToGuide=week===1 && origin && (from==="practice" || origin.topics.some(t=>t.id===from));
+  const route=centreRoute(), from=route.get("from"), origin=findGuide(route.get("guide")||"centre",week);
+  const returnToGuide=origin && ((from==="practice" && origin.bank) || origin.topics.some(t=>t.id===from));
   const supplementary=week===2&&current.topic?chapters[2].find(c=>c.id===current.topic):null;
   const diagram=supplementary?`<section class="concept-visual"><h4 lang="en">Visual explanation</h4><p class="label" lang="en">ADDED TEACHING DIAGRAM</p>${figure(supplementary)}</section>`:"";
   return `<div class="lesson-layout"><aside class="toc slide-toc" aria-label="Week ${week} PDF pages"><span class="label">${slides.length} TEACHING PAGES · ORIGINAL PDF ORDER</span>${toc}</aside><article class="lesson slide-lesson" id="lesson" tabindex="-1">
     <div class="lesson-top"><div><p class="eyebrow">WEEK ${pad(week)} · LESSON ${pad(position+1)} / ${slides.length} · PDF PAGE ${pad(current.page)}</p><h3 lang="en">${escapeHtml(current.en)}<small>${chineseTranslation(escapeHtml(current.zh),"span")}</small></h3></div><span class="timer">◷ <span id="page-time">${duration(record.time[current.id])}</span></span></div>
     <div class="page-picker"><label for="slide-select" lang="en">Go to page</label><select id="slide-select" aria-label="Go to Week ${week} PDF page">${options}</select></div>
-    ${week===1 ? `<div class="guide-source-nav"><button class="soft" data-centre-exit>All Week 1 lessons</button>${returnToGuide?`<button class="soft" data-guide-open="${origin.id}" data-centre-topic="${escapeHtml(from)}">Return to guided lesson</button>`:""}</div>` : ""}
+    ${guidesForWeek(week).length ? `<div class="guide-source-nav"><button class="soft" data-centre-exit>All Week ${week} lessons</button>${returnToGuide?`<button class="soft" data-guide-open="${origin.id}" data-centre-topic="${escapeHtml(from)}">Return to guided lesson</button>`:""}</div>` : ""}
     <p class="reading-hint" lang="en">Read the English first. Hover over grey blocks for Chinese; move away to hide it. On touch screens, press and hold. Keyboard users can focus each block.</p>
     ${week===1 && route.has("attempt") && state(1).attempts[Number(route.get("attempt"))] ? `<button class="soft" data-weekly-score="${Number(route.get("attempt"))}">Return to weekly score</button>`:""}
     ${current.sourceGap?`<aside class="source-gap" role="note">${pair("Source note: the supplied PDF has an unavailable image on this page. Only readable original text is transcribed; missing questions and answers are not reconstructed.","来源提示：所提供PDF本页存在缺失图片。这里只转录可读取原文，不虚构缺失题目或答案。")}</aside>`:""}
@@ -10119,6 +10123,18 @@ function slideWorkedOptions(topicId,item,index,question) {
   return workedExampleOptions(item.answer,distractors,index+topicId.length);
 }
 
+function slideWorkedPrompt(item) {
+  return item.qen.replace(/ (?:Enter one word|Enter a decimal)\.$/,"");
+}
+
+function workedSteps(text) {
+  return text.split("→").map(step=>`<li>${escapeHtml(step.trim())}</li>`).join("");
+}
+
+function bilingualWorkedSolution(answer,en,zh) {
+  return `<p class="model-answer">Answer · <strong>${escapeHtml(answer)}</strong></p><h5>Worked solution</h5><ol>${workedSteps(en)}</ol>${chineseTranslation(`<ol>${workedSteps(zh)}</ol>`)}`;
+}
+
 function validWorkedExamples(record,n) {
   if(record===undefined) return true;
   if(!record || typeof record!=="object" || Array.isArray(record)) return false;
@@ -10131,6 +10147,9 @@ function validWorkedExamples(record,n) {
   }
   if(n===1) for(const guide of guidedModules) for(const topic of guide.topics) {
     topic.examples.forEach((example,i)=>known.set(workedExampleKey(topic.id,i),[example.answer[0],...guidedExampleDistractors[topic.id][i]]));
+  }
+  if(n!==1) for(const guide of guidesForWeek(n)) for(const topic of guide.topics) {
+    topic.examples.forEach(example=>known.set(example.id,example.options));
   }
   return Object.entries(record).every(([id,row])=>row && typeof row.checked==="boolean" && known.get(id)?.includes(row.choice));
 }
@@ -10188,13 +10207,265 @@ function renderSlideWorkedExamples(chapter) {
   const examples=guide.examples.map((item,index)=>{
     const question=chapter.questions.find(q=>q.id===item.id);
     const options=slideWorkedOptions(chapter.id,item,index,question);
-    const list=text=>text.split("→").map(step=>`<li>${escapeHtml(step.trim())}</li>`).join("");
-    const solution=`<p class="model-answer">Answer · <strong>${escapeHtml(item.answer)}</strong></p><h5>Worked solution</h5><ol>${list(item.sen)}</ol>${chineseTranslation(`<ol>${list(item.szh)}</ol>`)}`;
-    const prompt=item.qen.replace(/ (?:Enter one word|Enter a decimal)\.$/,"");
-    return `<details class="worked-example"${index===0?" open":""}><summary>Example ${index+1}</summary>${renderWorkedChoice(item.id,prompt,item.qzh,options,item.answer,solution)}</details>`;
+    const solution=bilingualWorkedSolution(item.answer,item.sen,item.szh);
+    return `<details class="worked-example"${index===0?" open":""}><summary>Example ${index+1}</summary>${renderWorkedChoice(item.id,slideWorkedPrompt(item),item.qzh,options,item.answer,solution)}</details>`;
   }).join("");
   return `<section class="worked-examples slide-worked" lang="en"><h4>Worked examples · ${escapeHtml(chapter.en)}</h4>${examples}</section>`;
 }
+</script>
+<script>// Topics are listed in the order and page numbering of each teacher PDF.
+const laterGuidePlans = {
+  2: [
+    ["spread", "Measuring spread", "离散程度", [
+      ["range", 1, 4,
+        "How far apart are the smallest and largest values?", "最大值与最小值相差多少？",
+        "Two groups can share a mean and still look very different. Range uses only their endpoints, so one extreme value can change it considerably.", "两组数据的均值可能相同，分散程度却不同。全距只看两个端点，因此对极端值很敏感。",
+        "Find the maximum and minimum, then subtract minimum from maximum. Keep the original unit.", "先找最大值和最小值，再用最大值减最小值。结果保留原单位。",
+      ],
+      ["quartile", 5, 7,
+        "How wide is the middle half of a dataset?", "中间一半的数据横跨多远？",
+        "The first and third quartiles mark the boundaries of the middle half. The semi-interquartile range is half that width.", "第一与第三四分位数划出中间一半数据的边界。半四分位距是这段距离的一半。",
+        "Use the quartiles supplied by the problem or its stated convention. Compute IQR = Q₃ − Q₁, then divide by two if asked for the semi-IQR.", "使用题给四分位数或指定算法。先计算 Q₃−Q₁，求半四分位距时再除以二。",
+      ],
+      ["variance", 8, 15,
+        "Why do we square the distances from the mean?", "为什么要将到均值的偏差平方？",
+        "The signed deviations from the mean sum to zero. Squaring keeps positive and negative deviations from cancelling and gives larger deviations more weight.", "各数值减均值后的有符号偏差总和为零。平方让正负偏差不再抵消，并使较大的偏差占更大权重。",
+        "Find the mean, subtract it from each score, square the deviations and add them. Divide by N for a population or n − 1 for the lecture’s sample variance.", "先求均值，再计算每个值与均值的偏差、平方并求和。总体方差除以 N，讲义中的样本方差除以 n−1。",
+      ],
+      ["sd", 16, 19,
+        "How do we put spread back in the original units?", "怎样把离散程度还原为原来的单位？",
+        "Standard deviation is the square root of variance. For scores measured in minutes, variance uses squared minutes and standard deviation uses minutes.", "标准差是方差的平方根。如果数据单位是分钟，方差单位是分钟平方，标准差仍用分钟。",
+        "Choose the population or sample convention first, calculate variance, then take its square root. Compare spread using the same unit and convention.", "先确定用总体还是样本公式，再计算方差并开平方。比较离散程度时要用相同单位和口径。",
+      ],
+    ]],
+    ["shape", "Reading distribution shape", "分布形状", [
+      ["skew", 20, 22,
+        "Which way does the longer tail point?", "较长的尾部朝哪边？",
+        "Right tails indicate positive skew and left tails indicate negative skew. A skewness of zero alone cannot establish that a distribution is normal.", "长尾在右是正偏，长尾在左是负偏。偏度为零本身不足以判定数据是正态分布。",
+        "Read the horizontal axis, trace each tail and name its direction. For the lecture’s coefficient, match the sign with the direction shown.", "读横轴，顺着两侧尾部找更长的一边。使用讲义的偏度系数时，将正负号与尾部方向对应。",
+      ],
+      ["kurtosis", 23, 25,
+        "Which kurtosis benchmark does this question use?", "这道题采用哪一种峰度基准？",
+        "The lecture uses 3 as the normal benchmark for ordinary kurtosis. Excess kurtosis subtracts 3 and uses zero as its benchmark.", "讲义将普通峰度与正态基准 3 比较。超额峰度减去 3，因此以零为基准。",
+        "Identify which measure is reported. For ordinary kurtosis, compare with 3: above is leptokurtic, equal is mesokurtic, below is platykurtic.", "先辨认报告的是普通峰度还是超额峰度。普通峰度大于、等于、小于 3 分别为尖峰、常峰和平峰。",
+      ],
+    ]],
+    ["inference", "From observations to conclusions", "从观察到推断", [
+      ["inference", 26, 29,
+        "Who did we observe, and who does the conclusion concern?", "实际观察了谁，结论又指向谁？",
+        "Descriptive statistics summarise the observed cases. Inferential statistics use sample information to draw a conclusion about a population.", "描述统计整理实际观察到的数据。推论统计利用样本信息对总体作出判断。",
+        "Name the sample and the population. If the conclusion goes beyond the observed cases, ask how the sample was collected.", "先指出样本和总体。如果结论超出了已观测对象，再检查样本如何取得。",
+      ],
+      ["charts", 30, 30,
+        "What does one bar or one dot represent?", "一根柱或一个点代表什么？",
+        "A category bar reports a frequency. In the lecture’s dot plot, each dot represents one observation and stacking shows repeated values.", "类别条形图用柱高表示频数。讲义的点图中，一个点是一条观测，重复值会堆叠。",
+        "Read the labels, then identify the unit represented by a bar or dot. Add heights or count points when asked for the total.", "先读标签，再确定每根柱或每个点的单位。求总数时按图表类型合计柱高或数点。",
+      ],
+      ["variables", 31, 34,
+        "What changes, what is measured, and what is held constant?", "什么在改变、什么被测量、什么保持不变？",
+        "In a study of paint type and drying time, paint type is the independent variable, drying time is the dependent variable, and room temperature can be kept constant.", "研究油漆类型与干燥时间时，油漆类型是自变量，干燥时间是因变量，室温可以作为控制变量保持不变。",
+        "Identify the research question. Name the explanatory or grouping variable, the measured outcome and the condition held fixed.", "先看研究问题，再找解释或分组因素、被测结果和固定条件。",
+      ],
+    ]],
+  ],
+  3: [
+    ["hypotheses", "Setting up a hypothesis test", "建立假设检验", [
+      ["hypothesis", 2, 8,
+        "What exactly are we testing about the population?", "我们到底要检验总体的什么命题？",
+        "The null hypothesis H₀ usually states no difference. The alternative H₁ states the difference sought. Both refer to population quantities.", "零假设 H₀ 通常写总体无差异。备择假设 H₁ 写研究关心的差异。两者都用总体量表述。",
+        "Name the population parameter. Write H₀ with equality and choose a directional or two-sided H₁ from the research question.", "先找总体参数，再写包含等号的 H₀。题目问方向就写相应单侧假设，问是否有差异就写双侧假设。",
+      ],
+      ["alpha", 9, 13,
+        "When is the evidence strong enough to reject H₀?", "什么时候有足够证据拒绝 H₀？",
+        "Alpha is the decision threshold set in advance. The p-value measures how extreme the result would be under H₀ and the test assumptions.", "α 是事先设定的判断门槛。p 值是在 H₀ 及检验条件下，观察到当前或更极端结果的概率。",
+        "Compare p with α. If p ≤ α, reject H₀. If p > α, report insufficient evidence to reject H₀.", "用 p 值与 α 比较。p≤α 时拒绝 H₀；p>α 时写证据不足，未拒绝 H₀。",
+      ],
+      ["errors", 14, 18,
+        "What kind of error could the decision make?", "这个决定可能犯哪一类错误？",
+        "Rejecting a true H₀ is a Type I error. Failing to reject a false H₀ is a Type II error. Power is 1 − β for a specified alternative.", "拒绝真的 H₀ 是一类错误，未拒绝假的 H₀ 是二类错误。针对给定备择的统计功效为 1−β。",
+        "Make a two-by-two table with the true state on one axis and the decision on the other. Locate the outcome in the table.", "画一个四格表，一边写 H₀ 的真实状态，另一边写检验决策，再把题目情境放入对应格。",
+      ],
+    ]],
+    ["t-tests", "Choosing and reading t-tests", "选择与解读 t 检验", [
+      ["one", 19, 26,
+        "Is one sample mean different from a fixed target?", "一个样本所代表的总体均值与目标值不同吗？",
+        "One-sample t compares one mean with a fixed reference value. The lecture compares the mean protein content with 20 g.", "单样本 t 检验比较一个总体均值与固定目标。讲义用蛋白质平均含量与 20 克比较。",
+        "Subtract the target from the sample mean, divide by s/√n and use df = n − 1. In SPSS, read the test value, t, df and two-sided p if the question is two-sided.", "用样本均值减目标值，除以 s/√n，自由度为 n−1。看 SPSS 时核对检验值、t、df，并按题意读双侧 p 值。",
+      ],
+      ["independent", 27, 32,
+        "Do two unrelated groups differ in mean outcome?", "两组互不相关的对象均值是否不同？",
+        "An independent-samples t-test compares means for different participants. The outcome is quantitative and the pooled calculation assumes equal population variances.", "独立样本 t 检验比较不同受试者的均值。结果变量为定量，合并方差版本要求两组总体方差相等。",
+        "Check the design and compare the group means. Use Levene’s result to choose the SPSS row in the lecture workflow, then read the t-test p-value. The pooled df is n₁ + n₂ − 2.", "先看设计并比较两组均值。按讲义流程用 Levene 结果选 SPSS 行，再读该行 t 检验的 p 值。合并方差的自由度是 n₁+n₂−2。",
+      ],
+      ["paired", 33, 38,
+        "What changed within each pair?", "每一对内部发生了什么变化？",
+        "A paired t-test uses one difference per pair. Check approximate normality of those differences, especially with few pairs.", "配对 t 检验每一对只算一个差值。尤其在样本较小时，要检查差值是否近似正态。",
+        "Choose the subtraction order and keep it consistent. Test the mean difference against zero with df = number of complete pairs − 1.", "先确定并始终使用相同的相减方向。检验总体差值均值是否为零，自由度为有效配对数减一。",
+      ],
+    ]],
+  ],
+  4: [
+    ["correlation-basics", "Understanding correlation", "理解相关", [
+      ["correlation", 2, 8,
+        "What does the pattern of paired observations show?", "成对观测的图形呈现什么趋势？",
+        "Each dot represents one case with two measurements. A rising or falling cloud suggests a positive or negative association. The coefficient’s sign and magnitude describe different things.", "一个点代表同一对象的两项测量。点云上升或下降提示正相关或负相关。系数的符号与绝对值分别表达方向和强度。",
+        "Trace the points from left to right. Read direction from the sign and linear strength from the absolute value of Pearson’s r, alongside the scatterplot.", "从左向右读点云。用 Pearson r 的正负号判断方向，结合散点图用绝对值判断线性强度。",
+      ],
+      ["correlation-measures", 9, 10,
+        "Which coefficient matches the two measurement scales?", "哪一种系数与两变量的测量尺度匹配？",
+        "The lecture lists methods for numeric pairs, ranks, a binary category paired with a numeric variable, and pairs of nominal variables.", "讲义按两变量尺度列出定量配对、秩次、二分类与定量配对，以及两个定类变量对应的方法。",
+        "Classify both columns first. Use Pearson for a linear numeric relationship, Spearman for ranks, point-biserial for a binary category and a quantitative variable, and Cramér’s V for two nominal categories.", "先分类两列数据。定量线性关系用 Pearson，秩次用 Spearman，二分类加定量用点二列，两个定类变量用 Cramér’s V。",
+      ],
+      ["pearson-formula", 11, 12,
+        "How do paired deviations determine the sign of Pearson’s r?", "成对偏差如何决定 Pearson r 的正负号？",
+        "For one case, ask whether both measurements are above their own means or one is below. Same-sign deviations contribute a positive product. Opposite-sign deviations contribute a negative one.", "对一个个案，比较两项测量各自位于均值之上还是之下。同号偏差的乘积为正，异号的乘积为负。",
+        "Pair X and Y by case. Centre each column around its mean, add the products of paired deviations and scale by the two columns’ spreads. The following prediction equation uses X to estimate Y.", "按个案配对 X 和 Y。各列减去各自均值，合计成对偏差乘积，再按两列的离散程度缩放。下一页的预测式则用 X 估计 Y。",
+      ],
+      ["correlation-design", 13, 18,
+        "What can we learn or predict from a scatterplot?", "散点图可以帮助我们理解或预测什么？",
+        "A descending plot groups higher X with lower Y. Observational data can describe and help predict, with causal direction and other possible influences left unresolved.", "下降的散点图表示较大的 X 常与较小的 Y 配对。观察数据可描述关系并辅助预测，因果方向和其他可能影响仍需另外验证。",
+        "Keep the two values from each case together. Check the shape and any extremes, then describe the trend in context. State the limits of predictions made from this sample.", "保留每个个案的两个值配对。检查形状和极端点，结合情境描述趋势，并写出使用该样本预测的限制。",
+      ],
+    ]],
+    ["correlation-output", "Computing and reporting coefficients", "计算和报告相关系数", [
+      ["pearson", 19, 22,
+        "What do r, p and N each tell us?", "r、p 和 N 分别告诉我们什么？",
+        "The lecture’s IQ and mathematics example reports r = .719, two-sided p = .019 and N = 10. These describe direction and strength, evidence against zero population correlation, and the number of paired cases.", "讲义的 IQ 与数学成绩示例给出 r=.719、双侧 p=.019、N=10。它们依次描述方向和强度、检验总体零相关的证据，以及配对个案数。",
+        "Read the intersection of the two variables, not the diagonal. For the manual calculation, keep each X with its Y before forming deviation products.", "读两变量交叉的格子。手算时保持每个 X 与其对应 Y 的配对，再计算偏差乘积。",
+      ],
+      ["spearman", 23, 23,
+        "How closely do the two sets of ranks agree?", "两组排名在多大程度上同向？",
+        "Spearman’s rho compares orderings. When values tie, give tied entries the average of the ranks they occupy.", "Spearman 秩相关比较次序。出现并列时，把占据的名次求平均，再分配给并列项。",
+        "Rank both columns. With no ties, the lecture’s shortcut uses the squared rank differences. With ties, correlate the assigned average ranks.", "分别为两列排序。没有并列时可用讲义中基于秩差平方和的简式。有并列时，对分配平均秩后的两列求相关。",
+      ],
+      ["cramer", 24, 25,
+        "How strong is the association between two nominal variables?", "两个定类变量的关联有多强？",
+        "Cramér’s V summarises strength for a contingency table on a 0–1 scale. The chi-square test and its p-value address evidence of association.", "Cramér’s V 用 0 到 1 描述列联表的关联强度。卡方检验与 p 值用于判断关联的证据。",
+        "Place one variable in rows and the other in columns. Read χ² and the p-value, then V. Use the cell percentages to describe the association’s pattern.", "将两个变量分别放在行和列。先读 χ² 与 p 值，再读 V，结合单元格百分比描述关联模式。",
+      ],
+    ]],
+  ],
+  5: [
+    ["linear-model", "Predicting with a line", "用直线作预测", [
+      ["prediction", 2, 3,
+        "Which value is known, and which are we trying to predict?", "哪个值已知，要预测的是哪一个？",
+        "Regression predicts an outcome using observed predictor values. The usefulness of a prediction depends on the sample and the range in which the model was fitted.", "回归利用已经观测到的预测变量值来估计结果。预测是否有意义取决于所用样本和模型拟合的范围。",
+        "Name X and Y in context. State the prediction task before writing the equation. Causal conclusions require evidence from the design.", "结合情境标明 X 和 Y，先说明要预测什么，再写方程。因果结论还要有研究设计提供的证据。",
+      ],
+      ["simple-regression", 4, 8,
+        "What do the intercept and slope mean?", "截距和斜率怎样解释？",
+        "In Ŷ = a + bX, a gives the fitted value at X = 0, and b gives the change in the fitted outcome per unit of X. The phone bill has a base fee and a per-minute charge.", "在 Ŷ=a+bX 中，a 是 X=0 时的拟合值，b 是 X 每增加一单位时拟合结果的改变量。电话费示例有基础费用和每分钟单价。",
+        "Identify the units, then substitute X. Interpret the intercept only if X = 0 is meaningful. Use predictions within the observed range when possible.", "先看单位，再代入 X。只有 X=0 在情境中有意义时才解释截距。预测尽量限于已观测范围。",
+      ],
+      ["residuals", 9, 9,
+        "By how much did the fitted line miss the observed value?", "拟合值偏离实际值多少？",
+        "A residual is the observed outcome minus its fitted value. A point above the fitted line has a positive residual.", "残差是实际结果减去拟合值。点在拟合线上方时，残差为正。",
+        "Compute Ŷ at the observed X, then calculate Y − Ŷ. A positive residual means the model underpredicted the observed outcome.", "先用观察到的 X 得到 Ŷ，再计算 Y−Ŷ。正残差表示模型低估了实际结果。",
+      ],
+    ]],
+    ["regression-predictors", "Comparing and selecting predictors", "比较与筛选预测变量", [
+      ["multiple-regression", 10, 15,
+        "How do we interpret one predictor in a model with several?", "模型中有多个预测变量时，怎样解读其中一个？",
+        "Multiple regression has one outcome and several predictors. An unstandardised slope uses the variables’ original units. A standardised coefficient uses standard deviation units.", "多元回归有一个结果与若干预测变量。非标准化斜率使用原单位，标准化系数使用标准差单位。",
+        "For a prediction, substitute all predictor values. To interpret one slope, state what changes in the predicted outcome when that predictor rises one unit and all the others are held fixed.", "预测时需要代入所有预测变量。解释单个斜率时，先说明其他变量保持不变，再说明该变量增加一单位时预测结果如何改变。",
+      ],
+      ["selection", 16, 20,
+        "How does each procedure construct its predictor set?", "四种方法分别怎样建立模型的变量集合？",
+        "Backward starts with all candidates and removes them. Forward starts with none and adds them. Stepwise can reassess included variables. Enter fits the selected set together.", "Backward 从全体候选变量开始逐步剔除；Forward 从空模型逐步加入；Stepwise 会重新检查已入模变量；Enter 将选定的一组一次纳入。",
+        "Read the starting model and identify whether the procedure adds, removes or does both. Interpret the resulting set in the context of the study.", "先找起始模型，再判断每一步是加入、剔除，还是两种都可以。最后结合研究问题理解筛选结果。",
+      ],
+    ]],
+  ],
+  6: [
+    ["anova-design", "Comparing group means", "比较组均值", [
+      ["anova", 2, 3,
+        "How do we compare means across several levels of one factor?", "怎样比较同一因素下多个组别的均值？",
+        "One-way ANOVA uses one categorical factor and a quantitative outcome. It can compare two or more groups. The overall null says that all population group means are equal.", "单因素 ANOVA 使用一个分类因素和一个定量结果。可以比较两个或更多组。整体零假设是各组总体均值相等。",
+        "Count factors separately from levels. If the overall test is significant, conclude that at least one mean differs from another. The overall result alone does not identify which pair.", "将因素数与水平数分开数。整体检验显著时，结论为至少一对组的均值有差异。仅凭整体结果无法定位是哪一对。",
+      ],
+      ["anova-assumptions", 4, 8,
+        "Which checks belong to the design, and which to the data?", "哪些前提从研究设计判断，哪些看数据？",
+        "Independence comes from how observations were collected. For the lecture’s standard test, check the continuous outcome, outliers, approximate normality within groups and equal variances.", "独立性由资料如何收集决定。讲义标准检验还要求连续因变量，并检查异常值、组内近似正态与方差齐性。",
+        "Read the design for independent observations. Examine each group rather than relying on a pooled plot. Levene’s test concerns variance, while Shapiro–Wilk concerns normality.", "结合设计判断观察是否独立。按组检查，而不是只看合并图。Levene 检验关注方差，Shapiro–Wilk 检验关注正态性。",
+      ],
+      ["two-way-anova", 9, 15,
+        "Does the effect of one factor change across the levels of the other?", "一个因素的差异会随另一因素的水平而改变吗？",
+        "A two-factor design has two main effects and an interaction. The interaction compares differences between cells. It asks whether a difference across one factor is the same at each level of the other.", "双因素设计有两个主效应和一个交互作用。交互作用比较单元格之间的差异，问一个因素的差异会不会随另一因素的水平而改变。",
+        "Name the two factors and count their level combinations. Check distributions and spreads in those cells. Read the two main-effect tests and the interaction test separately.", "先指出两个因素并数出水平组合。按组合检查分布与离散程度，再分别读两个主效应检验和交互作用检验。",
+      ],
+    ]],
+  ],
+};
+</script>
+<script>// Five examples for each passage separated in the Week 4 guide to preserve the lecture order.
+const additionalGuideExamples = {
+  "correlation-measures": [
+    ["Both variables are finishing ranks for the same runners. Which coefficient fits the scales?","同一批选手有两场比赛名次。哪一个系数符合测量尺度？","Spearman’s rho",["Pearson’s product–moment correlation on finish times","Cramér’s V"],"Both columns give ranks. Spearman uses the ordering of the paired cases.","两列都是名次。Spearman 用同一个案的两项秩次来衡量关联。"],
+    ["One variable is course attendance (yes/no), and the other is exam score on an interval scale. Which coefficient matches the lecture’s table?","一列为是否到课，另一列为等距考试成绩。按讲义表格应选什么？","Point-biserial correlation",["Spearman’s rho for two sets of ranks","Cramér’s V for two nominal variables"],"Attendance has two categories and the score is quantitative. This is a binary–quantitative pair.","到课是二分类，分数是定量值。这是二分类与定量配对。"],
+    ["A survey records music genre and transport mode. The categories are unordered. Which coefficient measures association strength?","调查记录音乐类型和出行方式，类别没有顺序。哪个系数衡量关联强度？","Cramér’s V",["Point-biserial correlation","Pearson’s r on arbitrary category codes"],"Both columns are nominal. Cross-tabulate the categories and use Cramér’s V for strength.","两列均为定类。先作列联表，再用 Cramér’s V 衡量关联强度。"],
+    ["Temperature in °C and reaction time in seconds show a roughly linear trend. Which coefficient describes its signed linear direction and strength?","摄氏温度与反应用时呈大致直线趋势。哪个系数描述有方向的线性强度？","Pearson’s r",["Cramér’s V","Point-biserial correlation"],"Both variables have meaningful numerical gaps and the question concerns a linear trend. Pearson’s r reports its direction and strength.","两列数值的差距都有意义，题目又问线性趋势。因此用 Pearson r 表示方向与强度。"],
+    ["Department codes 1, 2 and 3 identify three departments. How should the codes be classified before selecting a coefficient?","编号 1、2、3 用来标识三个部门。选系数前应怎样分类这些编号？","Nominal category labels",["Ordinal ranks","Ratio-scale measurements"],"Changing the department codes changes the labels but preserves membership. The numbers do not rank or measure the departments.","重新编码不会改变部门归属。数字只是类别标签，没有次序或测量单位。"]
+  ],
+  "pearson-formula": [
+    ["For one case, X is 2 above its mean and Y is 3 above its mean. What product does this case contribute to the numerator of Pearson’s r?","某个案的 X 高于均值 2，Y 高于均值 3。对 Pearson r 的分子贡献多少？","6",["−6","5"],"Multiply the two deviations: (+2)(+3) = +6.","将两个偏差相乘，(+2)(+3)=+6。"],
+    ["For one case, X is 2 below its mean and Y is 3 above its mean. What is the product of the deviations?","某个案的 X 低于均值 2，Y 高于均值 3。偏差的乘积是多少？","−6",["6","1"],"The X deviation is −2 and the Y deviation is +3. Their product is −6.","X 的偏差为 −2，Y 的偏差为 +3，乘积为 −6。"],
+    ["Every case has the same X value. What happens to Pearson’s r?","所有个案的 X 都相同。Pearson r 会怎样？","It is undefined because the X spread is zero.",["It equals zero by definition.","It equals +1 because all X values agree."],"Every centred X value equals zero, so the coefficient’s denominator is zero.","每个 X 减去均值后都是零，系数分母为零。"],
+    ["The X and Y values are matched by student. Should the two columns be sorted independently before computing Pearson’s r?","X、Y 按学生配对。求 Pearson r 前应分别独立排序两列吗？","Keep each student’s X and Y together.",["Sort each column independently from low to high.","Pair each student’s X with the next student’s Y."],"The cross-products describe association between paired measurements. Independent sorting changes the pairs.","偏差乘积描述原来成对观测的关系。独立排序会改变配对。"],
+    ["If the fitted equation is Ŷ = 4 + 2X, what does it predict at X = 3?","若预测式为 Ŷ=4+2X，X=3 的预测值为多少？","10",["6","14"],"Substitute 3 for X: 4 + 2 × 3 = 10. The output is a fitted outcome, not a correlation coefficient.","将 3 代入 X，4+2×3=10。计算得到的是预测结果。"]
+  ],
+  "correlation-design": [
+    ["On a scatterplot of travel speed and travel time for a fixed distance, the points fall from left to right. What direction is the association?","固定距离下，车速与用时的散点从左往右整体下降。相关方向是什么？","Negative",["Positive","No association is possible"],"Larger values on the horizontal axis tend to accompany smaller values on the vertical axis.","横轴数值较大时，纵轴数值往往较小，因此是负相关。"],
+    ["Students who sleep longer tend to score higher. Which conclusion is justified by this observational study alone?","睡得较久的学生往往分数较高。仅从这项观察研究能得到什么结论？","Longer sleep and higher scores are associated in these observations.",["Longer sleep caused every student’s score to improve.","Higher scores caused each student to sleep longer."],"The pattern describes how the measurements vary together. The design does not distinguish causal direction or rule out other influences.","数据可以描述两项测量如何共同变化。该设计无法确定因果方向，也不能排除其他影响。"],
+    ["The researcher records expectation and behaviour from each participant. What does one dot represent?","研究者记录每位参与者的期待值与行为得分。一个点代表什么？","One participant’s expectation and behaviour scores",["The mean scores of all participants","One expectation score without a behaviour score"],"A dot comes from one observation pair. Its coordinates are the two measurements for the same participant.","一个点来自一对观测，两个坐标分别是同一人的两项测量。"],
+    ["Two tests are positively correlated, but the points scatter around the trend. What can the first score provide about the second?","两次考试正相关，但散点在趋势线周围有分散。第一次的分数能说明什么？","An estimate of the second score with uncertainty",["The exact second score for every student","Proof that the first test caused the second score"],"A positive association can support prediction. Scatter around the pattern leaves prediction error.","正相关可帮助预测，围绕趋势的分散意味着预测有误差。"],
+    ["A scatterplot bends down and then up, while Pearson’s r is close to zero. What should the report say?","散点图先下降再上升，但 Pearson r 接近零。应怎样报告？","The linear association is weak, while the plot shows a curved pattern.",["The variables are independent because r is close to zero.","The points follow a strong positive straight line."],"Pearson’s r summarises linear association. A U-shaped pattern can give little linear correlation.","Pearson r 概括线性关联。U 形关系即使清晰，也可能得到接近零的线性相关。"]
+  ]
+};
+</script>
+<script>const guideVisualPages = {"correlation-measures":9,"pearson-formula":11,"correlation-design":14,anova:3,"anova-assumptions":7,"two-way-anova":15};
+
+function laterGuideExamples(id,chapter) {
+  if(additionalGuideExamples[id]) return additionalGuideExamples[id].map(([en,zh,answer,distractors,reason,reasonZh],index)=>({
+    id:workedExampleKey(id,index), prompt:[en,zh], answer,
+    options:workedExampleOptions(answer,distractors,id.length+index),
+    explanation:[reason,reasonZh]
+  }));
+  return teaching[id].examples.map((item,index)=>({
+    id:item.id, prompt:[slideWorkedPrompt(item),item.qzh], answer:item.answer,
+    options:slideWorkedOptions(id,item,index,chapter.questions.find(q=>q.id===item.id)),
+    explanation:[item.sen,item.szh]
+  }));
+}
+
+function laterGuideVisual(n,id,chapter) {
+  const page=guideVisualPages[id];
+  if(page){
+    const slide=studySlides(n).find(s=>s.page===page);
+    return `<figure class="figure original-slide guide-source-figure"><img src="${slide.image}" alt="${escapeHtml(slide.en)} · Teacher slides p. ${page}" decoding="async"><figcaption>Teacher slides · p. ${page} <button type="button" class="soft" data-zoom>Enlarge image</button></figcaption></figure>`;
+  }
+  return figure(chapter);
+}
+
+const laterGuidedModules = Object.fromEntries(Object.entries(laterGuidePlans).map(([n,plans])=>[
+  n, plans.map(([id,title,chinese,topics])=>({
+    id,week:Number(n),title,subtitle:[topics[0][3],chinese],
+    topics:topics.map(([topicId,first,last,en,zh,idea,ideaZh,method,methodZh])=>{
+      const chapter=chapters[n].find(c=>c.id===topicId);
+      const heading=chapter ? [chapter.en,chapter.zh] : ({
+        "correlation-measures":["Measurement scales and correlation methods","测量尺度与相关方法"],
+        "pearson-formula":["Pearson’s formula and a fitted line","Pearson 公式与拟合线"],
+        "correlation-design":["Scatterplots, design and prediction","散点图、研究设计与预测"]
+      })[topicId];
+      return {
+        id:topicId,title:heading[0],titleZh:heading[1],
+        pages:Array.from({length:last-first+1},(_,index)=>first+index),
+        question:[en,zh],idea:[idea,ideaZh],method:[method,methodZh],
+        visual:()=>laterGuideVisual(Number(n),topicId,chapter),
+        examples:laterGuideExamples(topicId,chapter)
+      };
+    })
+  }))
+]));
 </script>
 <script>/* The original pilot keeps its saved state, time keys and public deep links. */
 const centralTendencyModule = {
@@ -10210,7 +10481,9 @@ const guidedModules = [foundationModule, scalesModule, graphsModule, centralTend
 let activeGuide = centralTendencyModule;
 let centrePane = "mode";
 
-function findGuide(id) { return guidedModules.find(guide=>guide.id===id); }
+function guidesForWeek(n) { return n===1 ? guidedModules : laterGuidedModules[n]??[]; }
+function guideWeek(guide) { return guide.week??1; }
+function findGuide(id,n=1) { return guidesForWeek(n).find(guide=>guide.id===id); }
 function guideTimeKey(id) { return "guided-"+id; }
 function guidePages(guide) { return [...new Set(guide.topics.flatMap(t=>t.pages))].sort((a,b)=>a-b); }
 function savedGuide(weekRecord,guide) { return guide.id==="centre" ? weekRecord.centre : weekRecord.guided?.[guide.id]; }
@@ -10220,7 +10493,7 @@ function topicCovered(topic,guide,weekRecord) {
 function coveredCount(guide,weekRecord) { return guide.topics.filter(t=>topicCovered(t,guide,weekRecord)).length; }
 
 function centreState(guide=activeGuide) {
-  const record = state(1);
+  const record = state(guideWeek(guide));
   const owner = guide.id==="centre" ? record : (record.guided ??= {});
   return owner[guide.id] ??= {last:guide.topics[0].id, done:{}, examples:{}, answers:{}};
 }
@@ -10230,13 +10503,13 @@ function validateCentreLesson(record,guide=centralTendencyModule) {
   const topics = new Map(guide.topics.map(t=>[t.id,t]));
   const byTopic = (value, valid) => map(value) && Object.entries(value).every(([id, part]) => topics.has(id) && valid(part,id));
   const byExample = (value, valid) => map(value) && Object.entries(value).every(([index, part]) => /^[0-4]$/.test(index) && valid(part));
-  return map(record) && (record.last==="practice" || topics.has(record.last))
+  return map(record) && ((guide.bank && record.last==="practice") || topics.has(record.last))
     && byTopic(record.done,v=>typeof v==="boolean")
     && byTopic(record.answers,(v,id)=>Number.isInteger(v) && v>=0 && v<topics.get(id).check.choices.length)
     && byTopic(record.examples,v=>map(v) && Number.isInteger(v.index) && v.index>=0 && v.index<5
       && byExample(v.work,text=>typeof text==="string" && text.length<=800) && byExample(v.shown,flag=>typeof flag==="boolean"))
     && (record.prediction==null || ["mean","median","both"].includes(record.prediction))
-    && validateCentreAssessment(record.assessment,guide.bank);
+    && (guide.bank ? validateCentreAssessment(record.assessment,guide.bank) : record.assessment===undefined);
 }
 
 function centreRoute() {
@@ -10245,40 +10518,41 @@ function centreRoute() {
 
 function centreSetPane(id, push = true, guide=activeGuide) {
   activeGuide = guide;
-  if(id==="practice") {
+  if(id==="practice" && guide.bank) {
     history[push?"pushState":"replaceState"](null,"",examRoute("library",{guide:guide.id}));
     enterExam();return;
   }
   if (!id) id = centreState().last;
   if (!guide.topics.some(t=>t.id===id)) id = guide.topics[0].id;
   const entering = mode !== "centre";
-  week = 1;
+  week = guideWeek(guide);
   mode = "centre";
   centrePane = id;
   centreState().last = id;
   save();
-  if (push) history.pushState(null, "", "#week=1&lesson="+guide.id+"&topic=" + id);
+  if (push) history.pushState(null, "", "#week="+week+"&lesson="+guide.id+"&topic=" + id);
   render(id === "practice" ? "centre-assessment" : "centre-reader");
   if (entering && id !== "practice") window.scrollTo(0,0);
 }
 
 function centreOpenPdf(page) {
-  if (!studySlides(1).some(slide=>slide.page===page)) return;
+  if (!studySlides().some(slide=>slide.page===page)) return;
   const origin = mode==="centre" ? "&guide="+activeGuide.id+"&from="+centrePane : "";
-  history.pushState(null, "", "#week=1&source=" + page + origin);
+  history.pushState(null, "", "#week="+week+"&source=" + page + origin);
   mode = "study";
   setSlide(page - 1);
 }
 
 function centreLessonEntry() {
-  const record=state(1);
-  const rows=guidedModules.map(guide=>{
+  const record=state();
+  const rows=guidesForWeek(week).map(guide=>{
     const pages=guidePages(guide), done=coveredCount(guide,record);
     const saved=savedGuide(record,guide);
     return `<div class="guide-row"><div><small>PDF ${pages[0]}–${pages.at(-1)} · ${done}/${guide.topics.length} topics covered</small><h4>${escapeHtml(guide.title)}</h4><p>${escapeHtml(guide.subtitle[0])}</p>${centreZh(guide.subtitle[1])}</div>
       <button type="button" class="soft" data-guide-open="${guide.id}" aria-label="${saved?"Resume":"Open"} ${escapeHtml(guide.title)}">${saved?"Resume lesson":"Open lesson"}</button></div>`;
   }).join("");
-  return `<section class="guide-index" id="week-guide" lang="en" tabindex="-1"><header><div><p class="centre-kicker">WEEK 1 · DESCRIPTIVE STATISTICS</p><h3>Learn by topic</h3></div><button class="soft" data-guide-source>Browse PDF pages</button></header>${rows}</section>`;
+  const sourceNote=week===2 ? `<p class="centre-caption">The supplied PDF has missing images in its three closing questions. See the source notes on PDF pages 35, 38 and 41.${centreZh("讲义末尾三道原题缺少图片，可在 PDF 第 35、38、41 页查看来源说明。")}</p>` : "";
+  return `<section class="guide-index" id="week-guide" lang="en" tabindex="-1"><header><div><p class="centre-kicker">WEEK ${week} · GUIDED LESSONS</p><h3>Learn by topic</h3></div><button class="soft" data-guide-source>Browse PDF pages</button></header>${rows}${sourceNote}</section>`;
 }
 
 function centreZh(value) {
@@ -10297,15 +10571,21 @@ function centreExamples(section) {
   const state = centreMicro(section.id);
   const i = state.index;
   const example = section.examples[i];
-  const steps = example.steps.map((pair) => `<li>${escapeHtml(pair[0])}${centreZh(pair[1])}</li>`).join("");
   const picker = section.examples.map((item, n) => `<button type="button" data-centre-example="${n}" aria-label="Example ${n+1}" ${n === i ? 'aria-current="step"' : ""}>${n+1}</button>`).join("");
-  const options = workedExampleOptions(example.answer[0],guidedExampleDistractors[section.id][i],i+section.id.length);
-  const solution = `<div class="centre-solution"><p><strong>Answer · ${escapeHtml(example.answer[0])}</strong></p>${centreZh(example.answer[1])}<h5>Worked solution</h5><ol>${steps}</ol></div>`;
-  const hint = `<details class="centre-hint"><summary>Show a hint</summary>${centrePair(example.hint)}</details>`;
+  let exercise;
+  if(example.options){
+    exercise=renderWorkedChoice(example.id,...example.prompt,example.options,example.answer,bilingualWorkedSolution(example.answer,...example.explanation));
+  } else {
+    const steps=example.steps.map(pair=>`<li>${escapeHtml(pair[0])}${centreZh(pair[1])}</li>`).join("");
+    const options=workedExampleOptions(example.answer[0],guidedExampleDistractors[section.id][i],i+section.id.length);
+    const solution=`<div class="centre-solution"><p><strong>Answer · ${escapeHtml(example.answer[0])}</strong></p>${centreZh(example.answer[1])}<h5>Worked solution</h5><ol>${steps}</ol></div>`;
+    const hint=`<details class="centre-hint"><summary>Show a hint</summary>${centrePair(example.hint)}</details>`;
+    exercise=renderWorkedChoice(workedExampleKey(section.id,i),...example.prompt,options,example.answer[0],solution,hint);
+  }
   const previousNote = state.work[i] ? `<details><summary>Your earlier notes</summary><p class="worked-note">${escapeHtml(state.work[i])}</p></details>` : "";
   return `<section id="centre-examples" class="centre-block" tabindex="-1"><header class="centre-section-head"><h4>Worked examples</h4><nav class="centre-example-picker" aria-label="Choose an example">${picker}</nav></header>
     <p class="centre-caption">Example ${i+1} of ${section.examples.length}</p>
-    ${renderWorkedChoice(workedExampleKey(section.id,i),...example.prompt,options,example.answer[0],solution,hint)}
+    ${exercise}
     ${previousNote}
     ${i < 4 ? '<button class="centre-link" data-centre-example="'+(i+1)+'">Next example</button>' : ""}
     </section>`;
@@ -10330,6 +10610,7 @@ function centreConcept(section) {
   const pages = section.pages.map(page=>`<button class="centre-link" data-centre-pdf="${page}">p. ${page}</button>`).join("");
   const nextTopic=activeGuide.topics[activeGuide.topics.indexOf(section)+1];
   const next = nextTopic ? "Continue to " + nextTopic.title : "Finish this lesson";
+  const slideNotes=week===1?"":`<details class="guide-slide-notes"><summary>Slide-by-slide notes</summary>${studySlides().filter(slide=>section.pages.includes(slide.page)).map(slide=>`<section><h5><button class="centre-link" data-centre-pdf="${slide.page}">p. ${slide.page} · ${escapeHtml(slide.en)}</button></h5>${centrePair(slide.walk)}</section>`).join("")}</details>`;
   return `<article class="centre-reader" id="centre-reader" tabindex="-1">
       <header class="centre-chapter-head"><p class="centre-kicker">${escapeHtml(section.title)} <span>·</span> PDF ${section.pages[0]}${section.pages.length>1?"–"+section.pages.at(-1):""}</p>
       <h3>${escapeHtml(section.question[0])}</h3>${centreZh(section.titleZh+" · "+section.question[1])}</header>
@@ -10337,6 +10618,7 @@ function centreConcept(section) {
       <div id="centre-visual" tabindex="-1">${section.visual ? section.visual() : renderCentreVisual(section.id, !!prediction, !!prediction)}
       ${prediction ? `<div class="centre-feedback ${prediction==="mean"?"is-correct":""}" role="status"><strong>Your prediction · ${escapeHtml(prediction==="both" ? "Both measures" : "The "+prediction)}</strong>${centrePair(explanations[prediction])}</div>` : ""}</div>
       <div class="centre-method"><h4>How to work it out</h4>${centrePair(section.method)}</div>
+      ${slideNotes}
       ${centreExamples(section)}
       <div class="centre-next"><div class="centre-source">Teacher slides ${pages}</div><button class="primary" data-centre-next>${next}</button></div>
     </article>`;
@@ -10347,18 +10629,18 @@ function renderCentreLesson() {
   const sections=activeGuide.topics;
   const links = sections.map((section,i) => {
     const id=section.id,label=section.title;
-    const done = topicCovered(section,activeGuide,state(1));
+    const done = topicCovered(section,activeGuide,state());
     return `<button type="button" data-centre-topic="${id}" ${id===centrePane?'aria-current="step"':""}><span class="centre-step-index">${done?"✓":String(i+1).padStart(2,"0")}</span><span>${label}</span>${done?'<span class="centre-sr"> · Completed</span>':""}</button>`;
   }).join("");
-  return `<section class="centre-shell" lang="en"><header class="centre-mast"><div><p class="centre-kicker">Week 1 <span>/</span> Guided lesson</p><h2>${escapeHtml(activeGuide.title)}</h2><p>${escapeHtml(activeGuide.subtitle[0])}</p>${centreZh(activeGuide.subtitle[1])}</div><button class="soft" data-centre-exit>All Week 1 lessons</button></header>
+  return `<section class="centre-shell" lang="en"><header class="centre-mast"><div><p class="centre-kicker">Week ${week} <span>/</span> Guided lesson</p><h2>${escapeHtml(activeGuide.title)}</h2><p>${escapeHtml(activeGuide.subtitle[0])}</p>${centreZh(activeGuide.subtitle[1])}</div><button class="soft" data-centre-exit>All Week ${week} lessons</button></header>
     <div class="centre-layout"><aside class="centre-nav"><h3>Lesson contents</h3><nav aria-label="Guided lesson contents">${links}</nav>
-      <p class="centre-progress">${coveredCount(activeGuide,state(1))} of ${activeGuide.topics.length} topics covered${topic?`<br>Topic time <time id="centre-study-clock">${duration(state(1).time[guideTimeKey(topic.id)])}</time>`:""}</p><details class="centre-help"><summary>How to show Chinese</summary><p>Hover over a grey strip, focus it with the keyboard, or press and hold on a touch screen.</p></details></aside>
+      <p class="centre-progress">${coveredCount(activeGuide,state())} of ${activeGuide.topics.length} topics covered${topic?`<br>Topic time <time id="centre-study-clock">${duration(state().time[guideTimeKey(topic.id)])}</time>`:""}</p><details class="centre-help"><summary>How to show Chinese</summary><p>Hover over a grey strip, focus it with the keyboard, or press and hold on a touch screen.</p></details></aside>
     ${centreConcept(topic)}</div></section>`;
 }
 
 function centreClick(button) {
   if (button.hasAttribute("data-guide-open")) {
-    const guide=findGuide(button.dataset.guideOpen);
+    const guide=findGuide(button.dataset.guideOpen,week);
     if(guide) centreSetPane(button.dataset.centreTopic,true,guide);
     return true;
   }
@@ -10367,8 +10649,8 @@ function centreClick(button) {
     return true;
   }
   if (button.hasAttribute("data-centre-exit")) {
-    history.pushState(null, "", "#week=1&view=lessons");
-    setWeek(1);
+    history.pushState(null, "", "#week="+week+"&view=lessons");
+    setWeek(week);
     return true;
   }
   if (button.hasAttribute("data-centre-topic")) {
@@ -10398,7 +10680,7 @@ function centreClick(button) {
     record.done[centrePane] = true;
     const nextTopic=activeGuide.topics[activeGuide.topics.indexOf(section)+1];
     if(nextTopic) centreSetPane(nextTopic.id);
-    else {save();location.hash="week=1&view=lessons";}
+    else {save();location.hash="week="+week+"&view=lessons";}
     return true;
   } else {
     return false;
@@ -11489,7 +11771,8 @@ function refresh() {
   if (Object.keys(saved).length) data = saved;
 }
 function complete(n) {
-  if(n===1) return guidedModules.every(guide=>coveredCount(guide,state(1))===guide.topics.length);
+  const guides=guidesForWeek(n);
+  if(guides.length) return guides.every(guide=>coveredCount(guide,state(n))===guide.topics.length);
   if(slideCourses[n]) return studySlides(n).every(s=>state(n).slideDone?.[s.id]);
   return !!chapters[n]?.every(c=>state(n).done[c.id]);
 }
@@ -11555,7 +11838,8 @@ function render(scrollTarget) {
   const list=chapters[week];
   const isMidterm=week===midtermWeek;
   const [zh,en]=titles[week]??(isMidterm?["期中考试","Midterm examination"]:week<midtermWeek?["定量分析","Quantitative analysis"]:["定性分析","Qualitative analysis"]);
-  const status=week===1 ? `${guidedModules.filter(guide=>coveredCount(guide,state())===guide.topics.length).length} / 5 guided lessons covered` : slideCourses[week]?`${studySlides().filter(s=>state().slideDone?.[s.id]).length} / ${studySlides().length} teaching pages read`:list?`${list.filter(c=>state().done[c.id]).length} / ${list.length} 章节完成`:isMidterm?"2026.11.27 · FRI":"待补讲义";
+  const guides=guidesForWeek(week);
+  const status=guides.length ? `${guides.filter(guide=>coveredCount(guide,state())===guide.topics.length).length} / ${guides.length} guided lessons covered` : slideCourses[week]?`${studySlides().filter(s=>state().slideDone?.[s.id]).length} / ${studySlides().length} teaching pages read`:list?`${list.filter(c=>state().done[c.id]).length} / ${list.length} 章节完成`:isMidterm?"2026.11.27 · FRI":"待补讲义";
   const body=list?(mode==="quiz"?renderQuiz():mode==="results"?renderResults():renderStudy()):`<div class="empty"><h3>${zh}</h3><p>${week===5?"本周是当前教学周。待收到 Week 5 讲义后补充课程和测验。":isMidterm?"期中考试安排为 2026 年 11 月 27 日（周五）。期中假期为 11 月 30 日至 12 月 6 日。":"本周课程和测验将在收到讲义后补充。"}</p></div>`;
   $("workspace").innerHTML=`<section aria-labelledby="week-heading"><header class="week-title"><div><p class="eyebrow">COURSE MODULE / WEEK ${pad(week)}</p><h2 id="week-heading" lang="en">${en}<small>${chineseTranslation(escapeHtml(zh),"span")}</small></h2></div><span class="tag">${status}</span></header><div class="week-body">${list?stats():""}${body}</div></section>`;
   const toc=document.querySelector(".slide-toc");
@@ -11577,7 +11861,7 @@ function renderDefinitions(chapter) {
   return `<section class="definitions" aria-labelledby="definitions-heading"><h4 id="definitions-heading" lang="en">Key definitions</h4>${rows}</section>`;
 }
 function renderStudy() {
-  if(week===1 && !centreRoute().has("source")) return centreLessonEntry();
+  if(guidesForWeek(week).length && !centreRoute().has("source")) return centreLessonEntry();
   if(slideCourses[week]) return renderSlideStudy();
   const list=chapters[week], record=state(), chapter=list[topic], finished=complete(week);
   const toc=list.map((c,i)=>`<button class="topic" type="button" data-topic="${i}" ${i===topic?'aria-current="step"':""}><span class="num">${record.done[c.id]?"✓":pad(i+1)}</span><span lang="en">${c.en}</span><time id="time-${c.id}">${duration(record.time[c.id])}</time></button>`).join("");
@@ -11713,10 +11997,10 @@ function checkpoint() {
     }
     return;
   }
-  if(week===1 && mode==="study" && !centreRoute().has("source")) return;
+  if(mode==="study" && guidesForWeek(week).length && !centreRoute().has("source")) return;
   refresh();
   if (mode==="centre") {
-    const record=state(1);
+    const record=state();
     if (centrePane==="practice") {
       if (!centreAssessIsAnswering()) return;
       centreAssessTiming(ms);
@@ -11752,23 +12036,20 @@ function setWeek(n) {
   if(slideCourses[n]) activeSlides[n]=null;
   week=n;mode="study";topic=Math.min(state().topic, (chapters[week]?.length??1)-1);
   if(examActive()){enterExam();return;}
+  const route=centreRoute();
   if (n===1) {
-    const route=centreRoute();
     if(route.get("practice")==="1" && state(1).draft){start();return;}
     const score=Number(route.get("score"));
     if(route.has("score") && Number.isInteger(score) && state(1).attempts[score]) {
       history.replaceState(null,"",examRoute("library",{week:1,score}));enterExam();return;
     }
-    const guide=findGuide(route.get("lesson"));
-    if (guide) {
-      centreSetPane(route.get("topic"),false,guide);
-      return;
-    }
+  }
+  const guide=findGuide(route.get("lesson"),n);
+  if(guide){centreSetPane(route.get("topic"),false,guide);return;}
+  if(slideCourses[n] && route.has("source")){
     const source=Number(route.get("source"));
-    if (route.has("source") && studySlides(1).some(s=>s.page===source)) {
-      setSlide(source-1);
-      return;
-    }
+    setSlide(studySlides().some(slide=>slide.page===source)?source-1:currentSlide().page-1);
+    return;
   }
   render();
 }
@@ -11786,7 +12067,7 @@ function exportRecords() {
     chapters[n]?.forEach(c=>rows.push([n,"Lesson",c.en,record.done[c.id]?"Completed":"Open",duration(record.time[c.id])]));
     studySlides(n).forEach(s=>rows.push([n,"PDF page",`${s.page}: ${s.en}`,record.slideDone?.[s.id]?"Completed":"Open",duration(record.time[s.id])]));
     record.attempts.forEach((a,i)=>rows.push([n,"Practice",i+1,"Submitted","",duration(a.ms),a.score,a.order.length,a.date]));
-    if(n===1) for(const guide of guidedModules) {
+    for(const guide of guidesForWeek(n)) {
       for(const t of guide.topics) rows.push([n,guide.title,t.title,topicCovered(t,guide,record)?"Completed":"Open",duration(record.time[guideTimeKey(t.id)])]);
       savedGuide(record,guide)?.assessment?.attempts.forEach((a,i)=>rows.push([n,guide.title+" · Lesson check",i+1,"Submitted","",duration(a.ms),a.score,a.order.length,a.date]));
     }
@@ -11807,7 +12088,7 @@ $("week-grid").addEventListener("click",event=>{
   const button=event.target.closest("[data-week]");
   if(!button)return;
   const n=+button.dataset.week;
-  if(n===week && mode==="study") return;
+  if(n===week && mode==="study" && !centreRoute().has("source")) return;
   checkpoint();refresh();
   history.replaceState(null,"","#week="+n);
   setWeek(n);
@@ -11945,8 +12226,11 @@ function validateBackup(payload) {
     if(record.revision!==undefined && (n!==1 || !validExamState(record.revision))) throw Error("备份中的期中练习记录不完整。");
     if(!validWorkedExamples(record.workedExamples,n)) throw Error("备份中的例题作答记录无效。");
     const lessonIds=new Set(list.map(c=>c.id));
-    if(record.guided!==undefined && (n!==1 || !isMap(record.guided) || Object.entries(record.guided).some(([id,v])=>id==="centre" || !findGuide(id) || !validateCentreLesson(v,findGuide(id))))) throw Error("备份中的分课学习记录不完整。");
-    if(n===1) for(const guide of guidedModules) for(const t of guide.topics) lessonIds.add(guideTimeKey(t.id));
+    if(record.guided!==undefined && (!guidesForWeek(n).length || !isMap(record.guided) || Object.entries(record.guided).some(([id,v])=>{
+      const guide=findGuide(id,n);
+      return id==="centre" || !guide || !validateCentreLesson(v,guide);
+    }))) throw Error("备份中的分课学习记录不完整。");
+    for(const guide of guidesForWeek(n)) for(const t of guide.topics) lessonIds.add(guideTimeKey(t.id));
     if(slideCourses[n]) {
       const slideIds=new Set(Array.from({length:slideCourses[n].sourcePages},(_,i)=>"slide-"+String(i+1).padStart(2,"0")));
       slideIds.forEach(id=>lessonIds.add(id));

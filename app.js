@@ -36,7 +36,8 @@ function refresh() {
   if (Object.keys(saved).length) data = saved;
 }
 function complete(n) {
-  if(n===1) return guidedModules.every(guide=>coveredCount(guide,state(1))===guide.topics.length);
+  const guides=guidesForWeek(n);
+  if(guides.length) return guides.every(guide=>coveredCount(guide,state(n))===guide.topics.length);
   if(slideCourses[n]) return studySlides(n).every(s=>state(n).slideDone?.[s.id]);
   return !!chapters[n]?.every(c=>state(n).done[c.id]);
 }
@@ -102,7 +103,8 @@ function render(scrollTarget) {
   const list=chapters[week];
   const isMidterm=week===midtermWeek;
   const [zh,en]=titles[week]??(isMidterm?["期中考试","Midterm examination"]:week<midtermWeek?["定量分析","Quantitative analysis"]:["定性分析","Qualitative analysis"]);
-  const status=week===1 ? `${guidedModules.filter(guide=>coveredCount(guide,state())===guide.topics.length).length} / 5 guided lessons covered` : slideCourses[week]?`${studySlides().filter(s=>state().slideDone?.[s.id]).length} / ${studySlides().length} teaching pages read`:list?`${list.filter(c=>state().done[c.id]).length} / ${list.length} 章节完成`:isMidterm?"2026.11.27 · FRI":"待补讲义";
+  const guides=guidesForWeek(week);
+  const status=guides.length ? `${guides.filter(guide=>coveredCount(guide,state())===guide.topics.length).length} / ${guides.length} guided lessons covered` : slideCourses[week]?`${studySlides().filter(s=>state().slideDone?.[s.id]).length} / ${studySlides().length} teaching pages read`:list?`${list.filter(c=>state().done[c.id]).length} / ${list.length} 章节完成`:isMidterm?"2026.11.27 · FRI":"待补讲义";
   const body=list?(mode==="quiz"?renderQuiz():mode==="results"?renderResults():renderStudy()):`<div class="empty"><h3>${zh}</h3><p>${week===5?"本周是当前教学周。待收到 Week 5 讲义后补充课程和测验。":isMidterm?"期中考试安排为 2026 年 11 月 27 日（周五）。期中假期为 11 月 30 日至 12 月 6 日。":"本周课程和测验将在收到讲义后补充。"}</p></div>`;
   $("workspace").innerHTML=`<section aria-labelledby="week-heading"><header class="week-title"><div><p class="eyebrow">COURSE MODULE / WEEK ${pad(week)}</p><h2 id="week-heading" lang="en">${en}<small>${chineseTranslation(escapeHtml(zh),"span")}</small></h2></div><span class="tag">${status}</span></header><div class="week-body">${list?stats():""}${body}</div></section>`;
   const toc=document.querySelector(".slide-toc");
@@ -124,7 +126,7 @@ function renderDefinitions(chapter) {
   return `<section class="definitions" aria-labelledby="definitions-heading"><h4 id="definitions-heading" lang="en">Key definitions</h4>${rows}</section>`;
 }
 function renderStudy() {
-  if(week===1 && !centreRoute().has("source")) return centreLessonEntry();
+  if(guidesForWeek(week).length && !centreRoute().has("source")) return centreLessonEntry();
   if(slideCourses[week]) return renderSlideStudy();
   const list=chapters[week], record=state(), chapter=list[topic], finished=complete(week);
   const toc=list.map((c,i)=>`<button class="topic" type="button" data-topic="${i}" ${i===topic?'aria-current="step"':""}><span class="num">${record.done[c.id]?"✓":pad(i+1)}</span><span lang="en">${c.en}</span><time id="time-${c.id}">${duration(record.time[c.id])}</time></button>`).join("");
@@ -260,10 +262,10 @@ function checkpoint() {
     }
     return;
   }
-  if(week===1 && mode==="study" && !centreRoute().has("source")) return;
+  if(mode==="study" && guidesForWeek(week).length && !centreRoute().has("source")) return;
   refresh();
   if (mode==="centre") {
-    const record=state(1);
+    const record=state();
     if (centrePane==="practice") {
       if (!centreAssessIsAnswering()) return;
       centreAssessTiming(ms);
@@ -299,23 +301,20 @@ function setWeek(n) {
   if(slideCourses[n]) activeSlides[n]=null;
   week=n;mode="study";topic=Math.min(state().topic, (chapters[week]?.length??1)-1);
   if(examActive()){enterExam();return;}
+  const route=centreRoute();
   if (n===1) {
-    const route=centreRoute();
     if(route.get("practice")==="1" && state(1).draft){start();return;}
     const score=Number(route.get("score"));
     if(route.has("score") && Number.isInteger(score) && state(1).attempts[score]) {
       history.replaceState(null,"",examRoute("library",{week:1,score}));enterExam();return;
     }
-    const guide=findGuide(route.get("lesson"));
-    if (guide) {
-      centreSetPane(route.get("topic"),false,guide);
-      return;
-    }
+  }
+  const guide=findGuide(route.get("lesson"),n);
+  if(guide){centreSetPane(route.get("topic"),false,guide);return;}
+  if(slideCourses[n] && route.has("source")){
     const source=Number(route.get("source"));
-    if (route.has("source") && studySlides(1).some(s=>s.page===source)) {
-      setSlide(source-1);
-      return;
-    }
+    setSlide(studySlides().some(slide=>slide.page===source)?source-1:currentSlide().page-1);
+    return;
   }
   render();
 }
@@ -333,7 +332,7 @@ function exportRecords() {
     chapters[n]?.forEach(c=>rows.push([n,"Lesson",c.en,record.done[c.id]?"Completed":"Open",duration(record.time[c.id])]));
     studySlides(n).forEach(s=>rows.push([n,"PDF page",`${s.page}: ${s.en}`,record.slideDone?.[s.id]?"Completed":"Open",duration(record.time[s.id])]));
     record.attempts.forEach((a,i)=>rows.push([n,"Practice",i+1,"Submitted","",duration(a.ms),a.score,a.order.length,a.date]));
-    if(n===1) for(const guide of guidedModules) {
+    for(const guide of guidesForWeek(n)) {
       for(const t of guide.topics) rows.push([n,guide.title,t.title,topicCovered(t,guide,record)?"Completed":"Open",duration(record.time[guideTimeKey(t.id)])]);
       savedGuide(record,guide)?.assessment?.attempts.forEach((a,i)=>rows.push([n,guide.title+" · Lesson check",i+1,"Submitted","",duration(a.ms),a.score,a.order.length,a.date]));
     }
@@ -354,7 +353,7 @@ $("week-grid").addEventListener("click",event=>{
   const button=event.target.closest("[data-week]");
   if(!button)return;
   const n=+button.dataset.week;
-  if(n===week && mode==="study") return;
+  if(n===week && mode==="study" && !centreRoute().has("source")) return;
   checkpoint();refresh();
   history.replaceState(null,"","#week="+n);
   setWeek(n);
